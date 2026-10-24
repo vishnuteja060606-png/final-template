@@ -97,8 +97,19 @@ def healthcheck():
 # Web View Routes (HTML Server-Rendered)
 @app.get("/", response_class=HTMLResponse, tags=["Web Views"])
 def homepage(request: Request, db: Session = Depends(get_db), current_user: User | None = Depends(get_current_user_optional)):
-    featured_creators = creator_service.list_featured(db, limit=4)
-    featured_jobs = job_service.list_published(db, limit=3)
+    # Creators cannot see other creators
+    featured_creators = []
+    if not current_user or current_user.role != "creator":
+        featured_creators = creator_service.list_featured(db, limit=4)
+
+    # Companies cannot see other companies' creative briefs
+    featured_jobs = []
+    if not current_user or current_user.role not in ["company", "agency"]:
+        featured_jobs = job_service.list_published(db, limit=3)
+    else:
+        company_profile = company_service.get_by_user_id(db, current_user.id)
+        if company_profile:
+            featured_jobs = job_service.list_by_company(db, company_profile.id)[:3]
     return templates.TemplateResponse(
         request=request,
         name="index.html",
@@ -311,6 +322,12 @@ def project_detail_page(
     job = job_service.get_by_id(db, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Creative brief not found.")
+
+    # Rule: Companies should NOT see other companies' briefs
+    if current_user and current_user.role in ["company", "agency"]:
+        company_profile = company_service.get_by_user_id(db, current_user.id)
+        if not company_profile or job.company_id != company_profile.id:
+            return RedirectResponse(url="/projects?notice=brief_restricted", status_code=303)
     return templates.TemplateResponse(
         request=request,
         name="jobs/detail.html",

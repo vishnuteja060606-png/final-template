@@ -105,15 +105,15 @@ function updateCurrencyDisplay() {
     const usdBtn = document.getElementById('btnCurrencyUSD');
     if (inrBtn && usdBtn) {
         if (currency === 'USD') {
-            usdBtn.classList.add('active', 'btn-light', 'text-primary');
-            usdBtn.classList.remove('btn-outline-light');
-            inrBtn.classList.remove('active', 'btn-light', 'text-primary');
-            inrBtn.classList.add('btn-outline-light');
-        } else {
-            inrBtn.classList.add('active', 'btn-light', 'text-primary');
+            usdBtn.classList.add('active', 'active-currency');
+            usdBtn.classList.remove('btn-outline-light', 'btn-light');
+            inrBtn.classList.remove('active', 'active-currency', 'btn-light');
             inrBtn.classList.remove('btn-outline-light');
-            usdBtn.classList.remove('active', 'btn-light', 'text-primary');
-            usdBtn.classList.add('btn-outline-light');
+        } else {
+            inrBtn.classList.add('active', 'active-currency');
+            inrBtn.classList.remove('btn-outline-light', 'btn-light');
+            usdBtn.classList.remove('active', 'active-currency', 'btn-light');
+            usdBtn.classList.remove('btn-outline-light');
         }
     }
 }

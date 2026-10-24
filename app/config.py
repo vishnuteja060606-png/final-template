@@ -1,10 +1,12 @@
 import os
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import field_validator
 from dotenv import load_dotenv
 
-load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
+# Load .env safely from project root
+load_dotenv(dotenv_path=BASE_DIR / ".env", override=True)
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AI Content Creator Marketplace"
@@ -12,12 +14,23 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     # Security
-    SECRET_KEY: str = "hackathon-insecure-secret-key-change-in-production-123456"
+    SECRET_KEY: str = "synapse-hackathon-secret-key-2024-ultra-secure-random-string-abc123!"
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
 
     # Database
     DATABASE_URL: str = f"sqlite:///{BASE_DIR / 'marketplace.db'}"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def resolve_database_url(cls, v: str | None) -> str:
+        if not v:
+            return f"sqlite:///{BASE_DIR / 'marketplace.db'}"
+        # Safely convert relative SQLite URL to absolute path
+        if v.startswith("sqlite:///."):
+            rel = v.replace("sqlite:///.", "").lstrip("/\\")
+            return f"sqlite:///{BASE_DIR / rel}"
+        return v
 
     # File Storage
     UPLOAD_DIR: str = str(BASE_DIR / "uploads")
@@ -28,9 +41,15 @@ class Settings(BaseSettings):
         "mp3", "wav", "pdf"
     ]
 
-    # Groq AI Provider
+    # Groq AI Provider (https://console.groq.com)
     GROQ_API_KEY: str = ""
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
+    GROQ_FALLBACK_MODELS: list[str] = [
+        "llama-3.3-70b-versatile",
+        "llama-3.1-8b-instant",
+        "llama3-70b-8192",
+        "mixtral-8x7b-32768"
+    ]
 
     # Currency Settings (Primary: INR, Optional: USD)
     PRIMARY_CURRENCY: str = "INR"

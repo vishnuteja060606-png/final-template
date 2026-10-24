@@ -1,8 +1,11 @@
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from app.db.database import get_db
+from app.models.user import User
 from app.schemas.search import CreatorFilterParams, CreatorSearchResult, JobFilterParams, JobSearchResult
 from app.services.search_service import search_service
+from app.services.company_service import company_service
+from app.services.auth_service import get_current_user_optional
 
 router = APIRouter(prefix="/api/search", tags=["Search & Discovery"])
 
@@ -44,7 +47,8 @@ def search_jobs(
     status: str | None = Query("published", description="Filter by status"),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional)
 ):
     params = JobFilterParams(
         query=query,
@@ -56,4 +60,23 @@ def search_jobs(
         page=page,
         limit=limit
     )
-    return search_service.search_jobs(db, params)
+    result = search_service.search_jobs(db, params)
+
+    # ── Role-based isolation: companies/agencies ONLY see their own briefs ──
+    if current_user and current_user.role in ["company", "agency"]:
+        company_profile = company_service.get_by_user_id(db, current_user.id)
+        if company_profile:
+            filtered_items = [j for j in result.items if j.company_id == company_profile.id]
+        else:
+            filtered_items = []
+        return JobSearchResult(
+            items=filtered_items,
+            total=len(filtered_items),
+            page=page,
+            limit=limit,
+            pages=1,
+            active_filters=result.active_filters,
+            message="Filtered for company confidentiality." if not filtered_items else None
+        )
+
+    return result

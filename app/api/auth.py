@@ -63,6 +63,11 @@ def register(payload: UserRegister, response: Response, db: Session = Depends(ge
         db.refresh(company)
         profile_id = company.id
 
+    # Automatically dispatch 2FA email verification code to validate user email address
+    code = AuthService.generate_email_otp(new_user.email, new_user.id)
+    new_user.email_otp_code = code
+    db.commit()
+
     # Create JWT access token
     token = AuthService.create_access_token(
         data={"sub": str(new_user.id), "role": new_user.role, "email": new_user.email}

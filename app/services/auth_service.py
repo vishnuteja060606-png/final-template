@@ -25,17 +25,22 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fals
 
 def _send_otp_email_smtp(email: str, code: str) -> None:
     """
-    Sends the 6-digit OTP via SMTP in a background thread.
+    Sends the 6-digit OTP via real SMTP in a background thread.
+    Supports both STARTTLS (port 587) and SSL (port 465).
     Falls back gracefully to console print if SMTP is not configured.
     """
-    if not settings.SMTP_USER.strip() or not settings.SMTP_PASSWORD.strip():
-        # Graceful fallback — no SMTP configured
+    smtp_user = settings.SMTP_USER.strip() if settings.SMTP_USER else ""
+    smtp_pass = settings.SMTP_PASSWORD.strip() if settings.SMTP_PASSWORD else ""
+
+    # Graceful fallback when credentials are not yet entered by user
+    if not smtp_user or not smtp_pass or "your_email" in smtp_user or "your_gmail" in smtp_pass:
         print(f"\n==================================================")
-        print(f"[2FA EMAIL DISPATCH — Console Fallback]")
+        print(f"[2FA EMAIL DISPATCH — Local Console Fallback]")
         print(f"TO      : {email}")
         print(f"SUBJECT : Synapse Two-Step Verification Code")
         print(f"OTP CODE: {code}")
         print(f"VALID   : 10 Minutes")
+        print(f"NOTE    : To send real email, configure SMTP_USER and SMTP_PASSWORD in .env")
         print(f"==================================================\n")
         return
 
@@ -60,8 +65,8 @@ def _send_otp_email_smtp(email: str, code: str) -> None:
               <h1 style="color:#fff;font-size:22px;margin:0;font-weight:700;letter-spacing:-0.5px;">
                 Synapse Marketplace
               </h1>
-              <p style="color:rgba(255,255,255,0.8);font-size:13px;margin:6px 0 0;">
-                Two-Step Verification
+              <p style="color:rgba(255,255,255,0.85);font-size:13px;margin:6px 0 0;">
+                Email Validation &amp; Two-Step Verification
               </p>
             </td>
           </tr>
@@ -83,7 +88,7 @@ def _send_otp_email_smtp(email: str, code: str) -> None:
                 ⏱️ This code expires in <strong style="color:#f59e0b;">10 minutes</strong>.
               </p>
               <p style="color:#64748b;font-size:12px;margin:0;">
-                If you did not request this code, please ignore this email.<br>
+                If you did not request this verification, please ignore this email.<br>
                 Your account remains secure.
               </p>
             </td>
@@ -105,29 +110,34 @@ def _send_otp_email_smtp(email: str, code: str) -> None:
 </html>
 """
         msg = MIMEMultipart("alternative")
-        msg["Subject"] = f"🔐 Synapse — Your Verification Code: {code}"
+        msg["Subject"] = f"🔐 Synapse Verification Code: {code}"
         msg["From"] = settings.SMTP_FROM
         msg["To"] = email
 
-        # Plain-text fallback
         plain_text = (
-            f"Your Synapse 2FA verification code is: {code}\n"
+            f"Your Synapse verification code is: {code}\n"
             f"This code expires in 10 minutes.\n\n"
             f"If you did not request this, please ignore this email."
         )
         msg.attach(MIMEText(plain_text, "plain"))
         msg.attach(MIMEText(html_body, "html"))
 
-        with smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT, timeout=15) as server:
-            server.ehlo()
-            server.starttls()
-            server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
-            server.sendmail(settings.SMTP_USER, email, msg.as_string())
+        port = int(settings.SMTP_PORT)
+        if port == 465:
+            with smtplib.SMTP_SSL(settings.SMTP_HOST, port, timeout=15) as server:
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(smtp_user, email, msg.as_string())
+        else:
+            with smtplib.SMTP(settings.SMTP_HOST, port, timeout=15) as server:
+                server.ehlo()
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.sendmail(smtp_user, email, msg.as_string())
 
-        logger.info(f"[2FA] OTP email sent successfully to {email}")
+        logger.info(f"[2FA] OTP email sent successfully via SMTP to {email}")
 
     except Exception as exc:
-        logger.warning(f"[2FA] SMTP send failed ({exc}). Printing code to console.")
+        logger.warning(f"[2FA] SMTP dispatch failed ({exc}). Printing code to console.")
         print(f"\n==================================================")
         print(f"[2FA EMAIL FALLBACK — SMTP ERROR]")
         print(f"TO      : {email}")

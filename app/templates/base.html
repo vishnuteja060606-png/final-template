@@ -19,81 +19,14 @@
         }
     </style>
     {% endif %}
-    <style>
-        /* ── Navbar Hard Override — always visible ── */
-        .synapse-nav {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
-            border-bottom: 1px solid rgba(99, 102, 241, 0.25);
-        }
-        .synapse-nav .navbar-brand span {
-            color: #f1f5f9 !important;
-        }
-        .synapse-nav .nav-link {
-            color: #cbd5e1 !important;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
-        .synapse-nav .nav-link:hover,
-        .synapse-nav .nav-link.active {
-            color: #818cf8 !important;
-        }
-        .synapse-nav .nav-link.text-warning,
-        .synapse-nav .nav-link.active.text-warning {
-            color: #fbbf24 !important;
-        }
-        /* Currency switcher */
-        .currency-btn {
-            font-size: 0.8rem;
-            font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 6px;
-            border: 1.5px solid rgba(148, 163, 184, 0.4);
-            color: #e2e8f0 !important;
-            background: transparent;
-            transition: all 0.2s;
-            cursor: pointer;
-        }
-        .currency-btn:hover,
-        .currency-btn.active-currency {
-            background: #4f46e5 !important;
-            border-color: #4f46e5 !important;
-            color: #fff !important;
-        }
-        /* User dropdown button */
-        .user-nav-btn {
-            background: rgba(99, 102, 241, 0.15) !important;
-            border: 1.5px solid rgba(99, 102, 241, 0.4) !important;
-            color: #e2e8f0 !important;
-            border-radius: 8px;
-            font-size: 0.875rem;
-            font-weight: 600;
-            transition: all 0.2s;
-        }
-        .user-nav-btn:hover,
-        .user-nav-btn:focus {
-            background: rgba(99, 102, 241, 0.3) !important;
-            border-color: #818cf8 !important;
-            color: #fff !important;
-        }
-        /* Collapsed nav on mobile stays dark */
-        .synapse-nav .navbar-collapse {
-            background: #0f172a;
-        }
-        @media (max-width: 991px) {
-            .synapse-nav .navbar-collapse {
-                padding: 12px 8px;
-                border-top: 1px solid rgba(255,255,255,0.07);
-            }
-        }
-    </style>
 </head>
 <body>
-    <!-- Top Navigation with Strict Role-Based Visibility & Currency Switcher -->
-    <nav class="navbar navbar-expand-lg synapse-nav sticky-top shadow-sm py-2">
+    <!-- Top Navigation with Strict Role-Based Visibility & High-Contrast Currency Switcher -->
+    <nav class="navbar navbar-expand-lg synapse-nav sticky-top py-2">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="/">
-                <span class="badge bg-primary p-2 rounded-3"><i class="bi bi-cpu-fill"></i></span>
-                <span class="fw-bold tracking-tight" style="color:#f1f5f9;">Synapse <span class="text-primary">Marketplace</span></span>
+                <span class="badge bg-primary p-2 rounded-3 shadow-sm"><i class="bi bi-cpu-fill text-white"></i></span>
+                <span class="fw-bold tracking-tight text-white">Synapse <span class="text-primary">Marketplace</span></span>
             </a>
             <button class="navbar-toggler border-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#navContent" aria-controls="navContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
@@ -112,7 +45,7 @@
 
                     <li class="nav-item">
                         <a class="nav-link {% if active_page == 'projects' %}active fw-semibold{% endif %}" href="/projects">
-                            <i class="bi bi-briefcase me-1"></i> Creative Briefs
+                            <i class="bi bi-briefcase me-1"></i> {% if current_user and current_user.role in ['company', 'agency'] %}My Brand Briefs{% else %}Creative Briefs{% endif %}
                         </a>
                     </li>
 
@@ -148,37 +81,37 @@
 
                 <div class="d-flex align-items-center gap-2 flex-wrap">
                     <!-- Global Currency Switcher: Primary INR (₹), Optional USD ($) -->
-                    <div class="btn-group btn-group-sm me-1" role="group" aria-label="Currency Selector">
-                        <button type="button" class="currency-btn active-currency" id="btnCurrencyINR" onclick="setGlobalCurrency('INR')">₹ INR</button>
+                    <div class="currency-switcher-group me-2" role="group" aria-label="Currency Selector">
+                        <button type="button" class="currency-btn active-currency active" id="btnCurrencyINR" onclick="setGlobalCurrency('INR')">₹ INR</button>
                         <button type="button" class="currency-btn" id="btnCurrencyUSD" onclick="setGlobalCurrency('USD')">$ USD</button>
                     </div>
 
                     {% if current_user %}
                         <div class="dropdown">
-                            <button class="btn user-nav-btn dropdown-toggle d-flex align-items-center gap-2 py-1 px-3" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-person-circle" style="color:#818cf8;"></i>
-                                <span class="fw-semibold" style="color:#e2e8f0;">{{ current_user.username }}</span>
-                                <span class="badge bg-primary text-uppercase" style="font-size:0.65rem;">{{ current_user.role }}</span>
+                            <button class="btn user-nav-btn dropdown-toggle py-1 px-3" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-person-circle fs-6" style="color:#818cf8;"></i>
+                                <span class="username-text">{{ current_user.username }}</span>
+                                <span class="badge bg-primary text-uppercase ms-1" style="font-size:0.65rem;">{{ current_user.role }}</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow" style="min-width:200px;">
+                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 rounded-3" style="min-width:210px; background:#1e293b; border:1px solid rgba(255,255,255,0.15) !important;">
                                 {% if current_user.role == 'creator' %}
-                                    <li><a class="dropdown-item" href="/dashboard/creator"><i class="bi bi-speedometer2 me-2"></i> Creator Dashboard</a></li>
+                                    <li><a class="dropdown-item py-2" href="/dashboard/creator"><i class="bi bi-speedometer2 text-primary me-2"></i> Creator Dashboard</a></li>
                                     {% if current_user.creator_profile %}
-                                        <li><a class="dropdown-item" href="/creators/{{ current_user.creator_profile.id }}"><i class="bi bi-person me-2"></i> Public Profile</a></li>
+                                        <li><a class="dropdown-item py-2" href="/creators/{{ current_user.creator_profile.id }}"><i class="bi bi-person text-info me-2"></i> Public Profile</a></li>
                                     {% endif %}
                                 {% else %}
-                                    <li><a class="dropdown-item" href="/dashboard/company"><i class="bi bi-speedometer2 me-2"></i> Company Dashboard</a></li>
+                                    <li><a class="dropdown-item py-2" href="/dashboard/company"><i class="bi bi-speedometer2 text-primary me-2"></i> Company Dashboard</a></li>
                                     {% if current_user.company_profile %}
-                                        <li><a class="dropdown-item" href="/companies/{{ current_user.company_profile.id }}"><i class="bi bi-building me-2"></i> Company Profile</a></li>
+                                        <li><a class="dropdown-item py-2" href="/companies/{{ current_user.company_profile.id }}"><i class="bi bi-building text-info me-2"></i> Company Profile</a></li>
                                     {% endif %}
                                 {% endif %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><button class="dropdown-item text-danger" onclick="handleLogout()"><i class="bi bi-box-arrow-right me-2"></i> Log Out</button></li>
+                                <li><hr class="dropdown-divider border-secondary"></li>
+                                <li><button class="dropdown-item text-danger py-2" onclick="handleLogout()"><i class="bi bi-box-arrow-right me-2"></i> Log Out</button></li>
                             </ul>
                         </div>
                     {% else %}
-                        <a href="/login" class="btn btn-sm px-3" style="background:rgba(255,255,255,0.08);border:1.5px solid rgba(255,255,255,0.2);color:#e2e8f0;border-radius:7px;">Log In</a>
-                        <a href="/register" class="btn btn-primary btn-sm px-3 fw-medium">Join Marketplace</a>
+                        <a href="/login" class="btn btn-sm px-3 fw-semibold text-white" style="background:rgba(255,255,255,0.12); border:1px solid rgba(255,255,255,0.25); border-radius:8px;">Log In</a>
+                        <a href="/register" class="btn btn-primary btn-sm px-3 fw-semibold shadow-sm" style="border-radius:8px;">Join Marketplace</a>
                     {% endif %}
                 </div>
             </div>

@@ -22,6 +22,8 @@ def list_published_jobs(
         company_profile = company_service.get_by_user_id(db, current_user.id)
         if company_profile:
             jobs = [j for j in jobs if j.company_id == company_profile.id]
+        else:
+            jobs = []
 
     return [
         JobResponse(
@@ -84,13 +86,27 @@ def list_my_jobs(
     ]
 
 @router.get("/{job_id}", response_model=JobResponse)
-def get_job_by_id(job_id: int, db: Session = Depends(get_db)):
+def get_job_by_id(
+    job_id: int,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional)
+):
     job = job_service.get_by_id(db, job_id)
     if not job:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Creative brief / job not found."
         )
+
+    # ── Role-based isolation: companies/agencies CANNOT view other companies' briefs ──
+    if current_user and current_user.role in ["company", "agency"]:
+        company_profile = company_service.get_by_user_id(db, current_user.id)
+        if not company_profile or job.company_id != company_profile.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Commercial confidentiality restriction: Companies cannot view other companies' creative briefs."
+            )
+
     return JobResponse(
         id=job.id,
         company_id=job.company_id,

@@ -18,6 +18,22 @@
 </div>
 
 <div class="container pb-5">
+    {% if request.query_params.get('notice') == 'brief_restricted' %}
+    <div class="alert alert-warning border-0 shadow-sm rounded-4 mb-4 d-flex align-items-center gap-3">
+        <i class="bi bi-shield-exclamation fs-3 text-warning"></i>
+        <div>
+            <strong>Commercial Confidentiality Active:</strong> Briefs posted by other brands and companies are confidential and cannot be viewed.
+        </div>
+    </div>
+    {% endif %}
+
+    {% if current_user and current_user.role in ['company', 'agency'] %}
+    <div class="alert alert-info border-0 shadow-sm rounded-3 mb-4 py-2 small d-flex align-items-center gap-2" style="background: rgba(14, 165, 233, 0.1); border: 1px solid rgba(14, 165, 233, 0.25) !important;">
+        <i class="bi bi-shield-lock-fill text-info"></i>
+        <span><strong>Brand Confidentiality Active:</strong> You are viewing only creative briefs published by your organization. Briefs posted by other brands are isolated.</span>
+    </div>
+    {% endif %}
+
     <div class="row g-4">
         <!-- Sidebar Filters -->
         <div class="col-lg-3">
@@ -120,10 +136,20 @@
             <div class="card p-5 text-center border-0 shadow-sm rounded-4">
                 <i class="bi bi-briefcase fs-1 text-muted mb-2"></i>
                 <h5 class="fw-bold">No briefs found</h5>
-                <p class="text-secondary small">No creative briefs match your current search criteria.</p>
-                <div>
-                    <a href="/projects" class="btn btn-outline-primary btn-sm">Clear Filters</a>
-                </div>
+                <p class="text-secondary small">
+                    {% if current_user and current_user.role in ['company', 'agency'] %}
+                    Your organization has not published any creative briefs yet.
+                    <div class="mt-2">
+                        <a href="/ai-builder" class="btn btn-warning btn-sm text-dark fw-bold me-2"><i class="bi bi-magic me-1"></i> Create Brief with AI</a>
+                        <a href="/dashboard/company" class="btn btn-outline-primary btn-sm">Brand Dashboard</a>
+                    </div>
+                    {% else %}
+                    No creative briefs match your current search criteria.
+                    <div>
+                        <a href="/projects" class="btn btn-outline-primary btn-sm mt-2">Clear Filters</a>
+                    </div>
+                    {% endif %}
+                </p>
             </div>
             {% endif %}
         </div>

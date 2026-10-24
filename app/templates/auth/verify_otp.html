@@ -1,59 +1,89 @@
 {% extends "base.html" %}
 
-{% block title %}Two-Step Verification — Synapse{% endblock %}
+{% block title %}Two-Step Verification &amp; Email Validation — Synapse{% endblock %}
 
 {% block extra_head %}
 <style>
-/* ── Full-page gradient background ── */
+/* ── Full-page immersive dark gradient ── */
 body {
-    background: linear-gradient(135deg, #0f172a 0%, #1a1040 50%, #0f172a 100%) !important;
+    background: radial-gradient(circle at 50% 20%, #1e1b4b 0%, #0f172a 65%, #020617 100%) !important;
     min-height: 100vh;
 }
 
-/* ── Centered card ── */
-.otp-card {
-    background: rgba(30, 41, 59, 0.92);
-    border: 1px solid rgba(99, 102, 241, 0.3);
-    border-radius: 20px;
-    backdrop-filter: blur(20px);
-    box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 80px rgba(79,70,229,0.08);
-    max-width: 460px;
+/* ── Central Card with glassmorphism ── */
+.auth-container {
+    min-height: calc(100vh - 72px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 36px 16px;
+}
+.otp-glass-card {
+    background: rgba(30, 41, 59, 0.88);
+    border: 1px solid rgba(129, 140, 248, 0.35);
+    border-radius: 24px;
+    backdrop-filter: blur(24px);
+    box-shadow: 0 25px 65px rgba(0, 0, 0, 0.55), 0 0 80px rgba(99, 102, 241, 0.15);
+    max-width: 480px;
     width: 100%;
-    padding: 44px 40px;
+    padding: 44px 38px;
+    position: relative;
+    overflow: hidden;
 }
 
-/* ── Shield icon pulse ── */
-.shield-icon {
-    width: 80px;
-    height: 80px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+/* Ambient glow accent */
+.otp-glass-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #4f46e5, #818cf8, #f59e0b, #4f46e5);
+    background-size: 300% 100%;
+    animation: bar-glow 6s linear infinite;
+}
+@keyframes bar-glow {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 300% 50%; }
+}
+
+/* ── Glowing animated shield icon ── */
+.shield-circle {
+    width: 76px;
+    height: 76px;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 2rem;
-    color: #fff;
+    font-size: 2.1rem;
+    color: #ffffff;
     margin: 0 auto 20px;
-    animation: pulse-shield 2.5s ease-in-out infinite;
-    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5);
+    box-shadow: 0 0 25px rgba(99, 102, 241, 0.55);
+    animation: pulse-ring 2.8s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
-@keyframes pulse-shield {
-    0%   { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5); }
-    70%  { box-shadow: 0 0 0 16px rgba(79, 70, 229, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+@keyframes pulse-ring {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 25px rgba(99, 102, 241, 0.55); }
+    50% { transform: scale(1.05); box-shadow: 0 0 40px rgba(129, 140, 248, 0.75); }
 }
 
-/* ── Step indicator ── */
-.step-indicator {
+/* ── 3-Step Visual Progress Bar ── */
+.steps-row {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: 8px;
     margin-bottom: 28px;
 }
-.step-dot {
-    width: 32px;
-    height: 32px;
+.step-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.step-badge {
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -61,196 +91,249 @@ body {
     font-size: 0.75rem;
     font-weight: 700;
 }
-.step-dot.done  { background: #4f46e5; color: #fff; }
-.step-dot.active{ background: #818cf8; color: #fff; box-shadow: 0 0 0 4px rgba(129,140,248,0.25); }
-.step-dot.idle  { background: rgba(100,116,139,0.3); color: #64748b; }
-.step-line {
-    width: 48px;
-    height: 2px;
-    background: rgba(100,116,139,0.3);
-}
-.step-line.done { background: #4f46e5; }
+.step-badge.done { background: #22c55e; color: #fff; }
+.step-badge.active { background: #4f46e5; color: #fff; box-shadow: 0 0 10px rgba(99, 102, 241, 0.6); }
+.step-badge.pending { background: rgba(148, 163, 184, 0.2); color: #64748b; }
+.step-text { font-size: 0.78rem; font-weight: 600; color: #94a3b8; }
+.step-text.active { color: #f1f5f9; }
+.step-divider { width: 24px; height: 2px; background: rgba(148, 163, 184, 0.25); }
+.step-divider.active { background: #4f46e5; }
 
-/* ── OTP digit inputs ── */
-.otp-box {
+/* ── Target Email Badge Pill ── */
+.email-pill-container {
+    background: rgba(15, 23, 42, 0.7);
+    border: 1px solid rgba(129, 140, 248, 0.3);
+    border-radius: 12px;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 22px;
+}
+.email-pill-text {
+    font-size: 0.88rem;
+    color: #e2e8f0;
+    font-weight: 600;
+    word-break: break-all;
+}
+.email-pill-change {
+    font-size: 0.78rem;
+    color: #818cf8;
+    text-decoration: none;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-left: 8px;
+}
+.email-pill-change:hover { text-decoration: underline; color: #a5b4fc; }
+
+/* ── 6-Digit OTP Boxes ── */
+.otp-boxes-grid {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px 0 20px;
+}
+.otp-digit-box {
     width: 52px;
-    height: 60px;
-    font-size: 1.6rem;
+    height: 62px;
+    font-size: 1.75rem;
     font-weight: 800;
     text-align: center;
-    border-radius: 12px;
-    border: 2px solid rgba(99, 102, 241, 0.3);
-    background: rgba(15, 23, 42, 0.7);
-    color: #e2e8f0;
+    border-radius: 14px;
+    border: 2px solid rgba(129, 140, 248, 0.3);
+    background: rgba(15, 23, 42, 0.8);
+    color: #ffffff;
     outline: none;
-    transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     caret-color: #818cf8;
 }
-.otp-box:focus {
+.otp-digit-box:focus {
     border-color: #818cf8;
-    box-shadow: 0 0 0 3px rgba(129,140,248,0.25);
-    transform: scale(1.05);
+    background: rgba(30, 41, 59, 0.95);
+    box-shadow: 0 0 16px rgba(129, 140, 248, 0.45), 0 0 0 3px rgba(99, 102, 241, 0.25);
+    transform: translateY(-2px);
 }
-.otp-box.filled {
+.otp-digit-box.filled {
     border-color: #4f46e5;
-    background: rgba(79, 70, 229, 0.15);
+    background: rgba(79, 70, 229, 0.18);
+    color: #a5b4fc;
+}
+.otp-boxes-grid.shake {
+    animation: shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+@keyframes shake {
+    10%, 90% { transform: translate3d(-2px, 0, 0); }
+    20%, 80% { transform: translate3d(3px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
 }
 
-/* ── Email input ── */
-.synapse-input {
-    background: rgba(15, 23, 42, 0.7) !important;
-    border: 2px solid rgba(99, 102, 241, 0.25) !important;
-    border-radius: 10px !important;
-    color: #e2e8f0 !important;
-    font-size: 0.95rem;
-    padding: 10px 14px !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
-}
-.synapse-input:focus {
-    border-color: #818cf8 !important;
-    box-shadow: 0 0 0 3px rgba(129,140,248,0.18) !important;
-    outline: none;
-}
-.synapse-input::placeholder { color: #475569 !important; }
-
-/* ── Buttons ── */
-.btn-synapse-primary {
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+/* ── Primary Action Button ── */
+.btn-verify-action {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     border: none;
-    color: #fff;
-    border-radius: 10px;
+    color: #ffffff;
+    border-radius: 12px;
     font-weight: 700;
-    padding: 12px;
     font-size: 1rem;
-    transition: opacity 0.2s, transform 0.1s;
-    box-shadow: 0 4px 16px rgba(79,70,229,0.35);
+    padding: 13px;
+    letter-spacing: -0.2px;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.45);
+    transition: all 0.2s ease;
 }
-.btn-synapse-primary:hover:not(:disabled) {
-    opacity: 0.92;
+.btn-verify-action:hover:not(:disabled) {
     transform: translateY(-1px);
-    color: #fff;
+    box-shadow: 0 10px 28px rgba(79, 70, 229, 0.6);
+    color: #ffffff;
 }
-.btn-synapse-primary:disabled { opacity: 0.55; }
+.btn-verify-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
 
-/* ── Timer ── */
-.otp-timer {
-    font-size: 0.82rem;
-    color: #64748b;
+/* ── Resend & Timer Row ── */
+.timer-resend-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.84rem;
+    color: #94a3b8;
+    margin-bottom: 24px;
 }
-.otp-timer .timer-val {
+.timer-highlight {
     color: #f59e0b;
     font-weight: 700;
 }
-.otp-timer .timer-val.expired { color: #ef4444; }
+.timer-highlight.expired { color: #ef4444; }
 
-/* ── Labels ── */
-.field-label {
-    color: #94a3b8;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-}
-.otp-card h2 { color: #f1f5f9; }
-.otp-card p { color: #94a3b8; }
-
-/* ── Send Code button (step 1) ── */
-.btn-send-code {
-    background: rgba(79,70,229,0.15);
-    border: 1.5px solid rgba(99,102,241,0.4);
+.btn-resend-link {
+    background: transparent;
+    border: none;
     color: #818cf8;
-    border-radius: 8px;
     font-weight: 600;
-    font-size: 0.85rem;
-    padding: 10px 16px;
-    transition: all 0.2s;
-    white-space: nowrap;
+    font-size: 0.84rem;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.15s ease;
 }
-.btn-send-code:hover:not(:disabled) {
-    background: rgba(79,70,229,0.3);
-    color: #a5b4fc;
-}
+.btn-resend-link:hover:not(:disabled) { color: #a5b4fc; text-decoration: underline; }
+.btn-resend-link:disabled { color: #475569; cursor: not-allowed; text-decoration: none; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 64px); padding: 32px 16px;">
-    <div class="otp-card">
+<div class="auth-container">
+    <div class="otp-glass-card text-center">
 
-        <!-- Shield Icon -->
-        <div class="shield-icon">
-            <i class="bi bi-shield-lock-fill"></i>
+        <!-- Animated Security Shield Icon -->
+        <div class="shield-circle">
+            <i class="bi bi-shield-check"></i>
         </div>
 
-        <div class="text-center mb-4">
-            <h2 class="fw-bold mb-1" style="font-size:1.5rem; letter-spacing:-0.5px;">Two-Step Verification</h2>
-            <p class="mb-0" style="font-size:0.88rem;">
-                Secure your Synapse account with email verification.
-            </p>
-        </div>
-
-        <!-- Step Indicator -->
-        <div class="step-indicator mb-4">
-            <div class="step-dot done" id="stepDot1" title="Enter Email">1</div>
-            <div class="step-line" id="stepLine12"></div>
-            <div class="step-dot active" id="stepDot2" title="Enter Code">2</div>
-            <div class="step-line" id="stepLine23"></div>
-            <div class="step-dot idle" id="stepDot3" title="Verified">
-                <i class="bi bi-check-lg" style="font-size:0.7rem;"></i>
-            </div>
-        </div>
-
-        <!-- Step 1: Email + Send Code -->
+        <!-- Dynamic Header (Registration vs 2FA Login) -->
         <div class="mb-3">
-            <div class="field-label">Account Email</div>
-            <div class="d-flex gap-2">
-                <input
-                    type="email"
-                    id="otpEmail"
-                    class="synapse-input form-control flex-grow-1"
-                    placeholder="you@example.com"
-                    value="{{ email or '' }}"
-                    autocomplete="email"
-                >
-                <button class="btn-send-code" id="btnSendCode" onclick="sendOtpCode()">
-                    <i class="bi bi-send me-1"></i> Send Code
-                </button>
-            </div>
-            <div id="sendStatus" class="mt-2" style="min-height:20px; font-size:0.8rem;"></div>
+            {% if request.query_params.get('registered') == '1' %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1 rounded-pill mb-2 fw-semibold">
+                <i class="bi bi-patch-check-fill me-1"></i> Account Created
+            </span>
+            <h2 class="fw-bold text-white mb-1" style="font-size: 1.55rem; letter-spacing: -0.5px;">Validate Your Email</h2>
+            <p class="text-white-50 small mb-0">
+                We've dispatched a 6-digit verification code to validate your email address and activate your session.
+            </p>
+            {% else %}
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill mb-2 fw-semibold">
+                <i class="bi bi-shield-lock-fill me-1"></i> Two-Step Verification
+            </span>
+            <h2 class="fw-bold text-white mb-1" style="font-size: 1.55rem; letter-spacing: -0.5px;">Two-Step Verification</h2>
+            <p class="text-white-50 small mb-0">
+                Enter the 6-digit security code sent to your registered email to authenticate.
+            </p>
+            {% endif %}
         </div>
 
-        <!-- Step 2: OTP Digits -->
-        <div class="mb-4">
-            <div class="field-label text-center mb-3">6-Digit Verification Code</div>
-            <div class="d-flex justify-content-center gap-2" id="otpInputs">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" autocomplete="one-time-code">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
-                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
+        <!-- 3-Step Progress Indicator -->
+        <div class="steps-row">
+            <div class="step-item">
+                <div class="step-badge done"><i class="bi bi-check"></i></div>
+                <span class="step-text active">1. Email</span>
             </div>
-
-            <!-- Timer & Resend -->
-            <div class="d-flex justify-content-between align-items-center mt-3 otp-timer">
-                <span id="timerDisplay">Code valid for <span class="timer-val" id="timerVal">10:00</span></span>
-                <button class="btn btn-link btn-sm text-decoration-none p-0" id="btnResendOtp"
-                    onclick="resendOtp()" style="color:#818cf8;font-size:0.82rem;" disabled>
-                    <i class="bi bi-arrow-repeat me-1"></i> Resend Code
-                </button>
+            <div class="step-divider active"></div>
+            <div class="step-item">
+                <div class="step-badge active" id="badgeStep2">2</div>
+                <span class="step-text active" id="textStep2">2. Enter Code</span>
+            </div>
+            <div class="step-divider" id="dividerStep23"></div>
+            <div class="step-item">
+                <div class="step-badge pending" id="badgeStep3"><i class="bi bi-check"></i></div>
+                <span class="step-text" id="textStep3">3. Verified</span>
             </div>
         </div>
 
-        <!-- Verify Button -->
-        <button class="btn btn-synapse-primary w-100 mb-3" id="btnVerifyOtp" onclick="submit2FAVerification()">
+        <!-- Target Email Pill -->
+        <div class="email-pill-container" id="emailPillCard">
+            <div class="d-flex align-items-center gap-2 text-start">
+                <i class="bi bi-envelope-at text-primary fs-5"></i>
+                <div>
+                    <div style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Sent To</div>
+                    <div class="email-pill-text" id="displayEmail">{{ email or 'Enter your account email' }}</div>
+                </div>
+            </div>
+            <a class="email-pill-change" onclick="toggleEditEmail()"><i class="bi bi-pencil-square me-1"></i>Edit</a>
+        </div>
+
+        <!-- Inline Email Input (Hidden by default unless edited) -->
+        <div id="emailInputRow" class="mb-3 d-none">
+            <div class="input-group">
+                <input type="email" class="form-control" id="otpEmail" placeholder="name@example.com" value="{{ email or '' }}" style="background: rgba(15,23,42,0.9); border: 1.5px solid rgba(129,140,248,0.4); color: #fff;">
+                <button class="btn btn-primary" type="button" onclick="handleSendNewEmail()"><i class="bi bi-send me-1"></i> Send Code</button>
+            </div>
+            <div class="text-start mt-1">
+                <a class="small text-secondary" style="cursor: pointer;" onclick="toggleEditEmail()">&larr; Keep current email</a>
+            </div>
+        </div>
+
+        <!-- Status Notification Box -->
+        <div id="statusAlert" class="small py-2 px-3 rounded-3 mb-3 d-none text-start"></div>
+
+        <!-- 6 Digit Input Boxes -->
+        <div class="otp-boxes-grid" id="otpInputsGrid">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-digit-box" autofocus autocomplete="one-time-code">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-digit-box">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-digit-box">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-digit-box">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-digit-box">
+            <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-digit-box">
+        </div>
+
+        <!-- Timer & Resend Controls -->
+        <div class="timer-resend-row">
+            <div>
+                <i class="bi bi-clock me-1 text-warning"></i>
+                <span>Expires in <span class="timer-highlight" id="timerCounter">10:00</span></span>
+            </div>
+            <button type="button" class="btn-resend-link" id="btnResendOtp" onclick="resendOtpCode()" disabled>
+                <i class="bi bi-arrow-repeat me-1"></i> Resend Code
+            </button>
+        </div>
+
+        <!-- Verify & Authenticate Button -->
+        <button type="button" class="btn btn-verify-action w-100 mb-3" id="btnVerifyOtp" onclick="submit2FAVerification()">
             <i class="bi bi-check2-circle me-1"></i> Verify &amp; Authenticate
         </button>
 
-        <div class="text-center">
-            <a href="/login" class="text-decoration-none" style="color:#64748b;font-size:0.83rem;">
+        <!-- Navigation helper -->
+        <div class="d-flex justify-content-between align-items-center mt-2 pt-3 border-top border-secondary border-opacity-25 small">
+            <a href="/login" class="text-white-50 text-decoration-none">
                 <i class="bi bi-arrow-left me-1"></i> Back to Password Login
             </a>
+            <span class="text-white-50" style="font-size: 0.76rem;">
+                <i class="bi bi-shield-fill-check text-success me-1"></i> 256-bit Secure
+            </span>
+        </div>
+
+        <!-- SMTP Dispatch Info Note -->
+        <div class="mt-3 text-center small text-white-50" style="font-size: 0.75rem;">
+            <i class="bi bi-mailbox me-1 text-primary"></i> Real SMTP mail dispatch enabled. Check your email inbox.
         </div>
     </div>
 </div>
@@ -258,86 +341,146 @@ body {
 
 {% block extra_scripts %}
 <script>
-// ── OTP Digit Navigation ────────────────────────────────────────────────
-const inputs = document.querySelectorAll('.otp-box');
-inputs.forEach((input, index) => {
-    input.addEventListener('input', (e) => {
-        // Only allow digits
+// ── 6-Digit Navigation & Paste Logic ────────────────────────────────────
+const boxes = document.querySelectorAll('.otp-digit-box');
+const grid = document.getElementById('otpInputsGrid');
+
+boxes.forEach((box, index) => {
+    box.addEventListener('input', (e) => {
+        // Strip non-digits
         e.target.value = e.target.value.replace(/\D/g, '');
         if (e.target.value.length === 1) {
-            e.target.classList.add('filled');
-            if (index < inputs.length - 1) inputs[index + 1].focus();
+            box.classList.add('filled');
+            if (index < boxes.length - 1) {
+                boxes[index + 1].focus();
+            } else {
+                // Last digit entered — auto submit!
+                const code = getOtpCode();
+                if (code.length === 6) {
+                    submit2FAVerification();
+                }
+            }
         } else {
-            e.target.classList.remove('filled');
+            box.classList.remove('filled');
         }
     });
-    input.addEventListener('keydown', (e) => {
+
+    box.addEventListener('keydown', (e) => {
         if (e.key === 'Backspace') {
             if (!e.target.value && index > 0) {
-                inputs[index - 1].value = '';
-                inputs[index - 1].classList.remove('filled');
-                inputs[index - 1].focus();
+                boxes[index - 1].value = '';
+                boxes[index - 1].classList.remove('filled');
+                boxes[index - 1].focus();
             } else {
-                e.target.classList.remove('filled');
+                box.classList.remove('filled');
             }
+        } else if (e.key === 'Enter') {
+            submit2FAVerification();
         }
     });
-    input.addEventListener('paste', (e) => {
+
+    box.addEventListener('paste', (e) => {
         e.preventDefault();
-        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-        [...pasted].slice(0, 6).forEach((ch, i) => {
-            if (inputs[i]) {
-                inputs[i].value = ch;
-                inputs[i].classList.add('filled');
+        const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+        if (!text) return;
+        [...text].slice(0, 6).forEach((char, i) => {
+            if (boxes[i]) {
+                boxes[i].value = char;
+                boxes[i].classList.add('filled');
             }
         });
-        const nextEmpty = Math.min(pasted.length, 5);
-        inputs[nextEmpty].focus();
+        const nextIdx = Math.min(text.length, 5);
+        boxes[nextIdx].focus();
+        if (text.length >= 6) {
+            submit2FAVerification();
+        }
     });
 });
 
 function getOtpCode() {
-    return Array.from(inputs).map(inp => inp.value.trim()).join('');
+    return Array.from(boxes).map(b => b.value.trim()).join('');
+}
+
+function clearOtpBoxes() {
+    boxes.forEach(b => {
+        b.value = '';
+        b.classList.remove('filled');
+    });
+    boxes[0].focus();
+}
+
+// ── Email Edit Toggle ───────────────────────────────────────────────────
+function toggleEditEmail() {
+    const pill = document.getElementById('emailPillCard');
+    const inputRow = document.getElementById('emailInputRow');
+    if (inputRow.classList.contains('d-none')) {
+        inputRow.classList.remove('d-none');
+        pill.classList.add('d-none');
+        document.getElementById('otpEmail').focus();
+    } else {
+        inputRow.classList.add('d-none');
+        pill.classList.remove('d-none');
+    }
+}
+
+async function handleSendNewEmail() {
+    const newEmail = document.getElementById('otpEmail').value.trim();
+    if (!newEmail) {
+        showStatus('Please enter a valid email address.', 'danger');
+        return;
+    }
+    document.getElementById('displayEmail').textContent = newEmail;
+    toggleEditEmail();
+    await sendOtpCode(newEmail);
 }
 
 // ── Countdown Timer ─────────────────────────────────────────────────────
 let timerInterval = null;
-let timerSeconds = 0;
+let timerSeconds = 600; // 10 minutes
 
-function startTimer(seconds) {
+function startTimer(seconds = 600) {
     clearInterval(timerInterval);
     timerSeconds = seconds;
-    const timerVal = document.getElementById('timerVal');
+    const counter = document.getElementById('timerCounter');
     const resendBtn = document.getElementById('btnResendOtp');
     resendBtn.disabled = true;
+    counter.classList.remove('expired');
 
     timerInterval = setInterval(() => {
         timerSeconds--;
         const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
         const s = String(timerSeconds % 60).padStart(2, '0');
-        timerVal.textContent = `${m}:${s}`;
+        counter.textContent = `${m}:${s}`;
+
+        if (timerSeconds <= 60) {
+            counter.classList.add('expired');
+        }
+
+        // Enable resend after 30 seconds
+        if (timerSeconds <= 570) {
+            resendBtn.disabled = false;
+        }
+
         if (timerSeconds <= 0) {
             clearInterval(timerInterval);
-            timerVal.textContent = 'Expired';
-            timerVal.classList.add('expired');
+            counter.textContent = 'Expired';
             resendBtn.disabled = false;
-            document.getElementById('timerDisplay').innerHTML =
-                '<span style="color:#ef4444;font-size:0.8rem;"><i class="bi bi-exclamation-triangle me-1"></i>Code expired — please resend.</span>';
+            showStatus('Verification code expired. Please click "Resend Code".', 'warning');
         }
     }, 1000);
 }
 
-// ── Send OTP ─────────────────────────────────────────────────────────────
-async function sendOtpCode() {
-    const email = document.getElementById('otpEmail').value.trim();
-    if (!email) {
-        showSendStatus('Please enter your email address first.', 'danger');
+// ── Send Code ────────────────────────────────────────────────────────────
+async function sendOtpCode(targetEmail) {
+    const email = targetEmail || document.getElementById('displayEmail').textContent.trim();
+    if (!email || email.includes('Enter your')) {
+        toggleEditEmail();
         return;
     }
-    const btn = document.getElementById('btnSendCode');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
-    document.getElementById('sendStatus').innerHTML = '';
+
+    const resendBtn = document.getElementById('btnResendOtp');
+    resendBtn.disabled = true;
+    resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
 
     try {
         const res = await fetch('/api/auth/send-otp', {
@@ -347,55 +490,71 @@ async function sendOtpCode() {
         });
         const data = await res.json();
         if (res.ok) {
-            showSendStatus('<i class="bi bi-envelope-check me-1"></i> Verification code sent to <strong>' + escHtml(email) + '</strong>', 'success');
-            startTimer(600); // 10 minutes
-            // Advance step indicator
-            document.getElementById('stepLine12').style.background = '#4f46e5';
-            inputs[0].focus();
+            showStatus(`<i class="bi bi-check-circle me-1"></i> A fresh verification code has been dispatched to <strong>${escapeHtml(email)}</strong>`, 'success');
+            startTimer(600);
+            clearOtpBoxes();
         } else {
-            showSendStatus(data.detail || 'Could not send code. Check email address.', 'danger');
+            showStatus(data.detail || 'Could not send verification code.', 'danger');
         }
     } catch (err) {
-        showSendStatus('Network error. Please try again.', 'danger');
+        showStatus('Network error connecting to email server.', 'danger');
     } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-send me-1"></i> Send Code';
+        resendBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Resend Code';
     }
 }
 
-function showSendStatus(msg, type) {
-    const colors = { success: '#22c55e', danger: '#ef4444', warning: '#f59e0b' };
-    document.getElementById('sendStatus').innerHTML =
-        `<span style="color:${colors[type] || '#94a3b8'};font-size:0.82rem;">${msg}</span>`;
-}
-
-function escHtml(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
-
-// ── Resend ────────────────────────────────────────────────────────────────
-async function resendOtp() {
-    document.getElementById('timerVal').classList.remove('expired');
+async function resendOtpCode() {
     await sendOtpCode();
 }
 
-// ── Verify ────────────────────────────────────────────────────────────────
+function showStatus(htmlMsg, type) {
+    const alertBox = document.getElementById('statusAlert');
+    const bgMap = {
+        success: 'rgba(34, 197, 94, 0.15)',
+        danger: 'rgba(239, 68, 68, 0.15)',
+        warning: 'rgba(245, 158, 11, 0.15)'
+    };
+    const borderMap = {
+        success: '1px solid rgba(34, 197, 94, 0.35)',
+        danger: '1px solid rgba(239, 68, 68, 0.35)',
+        warning: '1px solid rgba(245, 158, 11, 0.35)'
+    };
+    const colorMap = {
+        success: '#4ade80',
+        danger: '#f87171',
+        warning: '#fbbf24'
+    };
+    alertBox.style.background = bgMap[type] || 'rgba(15,23,42,0.8)';
+    alertBox.style.border = borderMap[type] || '1px solid rgba(255,255,255,0.1)';
+    alertBox.style.color = colorMap[type] || '#fff';
+    alertBox.innerHTML = htmlMsg;
+    alertBox.classList.remove('d-none');
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Submit Verification ──────────────────────────────────────────────────
 async function submit2FAVerification() {
-    const email = document.getElementById('otpEmail').value.trim();
+    const email = document.getElementById('displayEmail').textContent.trim();
     const code = getOtpCode();
 
-    if (!email) {
-        showToast('Please enter your account email.', 'danger');
+    if (!email || email.includes('Enter your')) {
+        showStatus('Please enter your account email address.', 'danger');
+        toggleEditEmail();
         return;
     }
     if (code.length !== 6) {
-        showToast('Please enter all 6 digits of your verification code.', 'danger');
+        showStatus('Please enter all 6 digits of the code.', 'danger');
+        grid.classList.add('shake');
+        setTimeout(() => grid.classList.remove('shake'), 400);
         return;
     }
 
     const btn = document.getElementById('btnVerifyOtp');
     btn.disabled = true;
-    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying...';
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Authenticating...';
 
     try {
         const res = await fetch('/api/auth/verify-otp', {
@@ -405,16 +564,19 @@ async function submit2FAVerification() {
         });
         const data = await res.json();
         if (!res.ok) {
-            showToast(data.detail || 'Verification failed. Please check the code.', 'danger');
+            showStatus(data.detail || 'Invalid or expired code. Please try again.', 'danger');
             btn.disabled = false;
             btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify &amp; Authenticate';
-            // Shake the OTP boxes
-            document.getElementById('otpInputs').style.animation = 'none';
-            inputs.forEach(i => { i.style.borderColor = '#ef4444'; });
-            setTimeout(() => inputs.forEach(i => { i.style.borderColor = ''; }), 1200);
+            grid.classList.add('shake');
+            boxes.forEach(b => { b.style.borderColor = '#ef4444'; });
+            setTimeout(() => {
+                grid.classList.remove('shake');
+                boxes.forEach(b => { b.style.borderColor = ''; });
+            }, 600);
             return;
         }
 
+        // Store tokens
         if (data.access_token) {
             localStorage.setItem('access_token', data.access_token);
             localStorage.setItem('user_role', data.role);
@@ -422,34 +584,40 @@ async function submit2FAVerification() {
             if (data.profile_id) localStorage.setItem('profile_id', data.profile_id);
         }
 
-        // Step 3 complete
+        // Advance visual step to Verified
         clearInterval(timerInterval);
-        document.getElementById('stepLine23').style.background = '#4f46e5';
-        const dot3 = document.getElementById('stepDot3');
-        dot3.classList.remove('idle');
-        dot3.classList.add('done');
+        document.getElementById('dividerStep23').classList.add('active');
+        const badge3 = document.getElementById('badgeStep3');
+        badge3.className = 'step-badge done';
+        document.getElementById('textStep3').classList.add('active');
 
-        showToast('✅ Verification successful! Logging you in...', 'success');
+        showStatus('<i class="bi bi-shield-fill-check me-1"></i> Verification successful! Directing to dashboard...', 'success');
+        btn.innerHTML = '<i class="bi bi-check-lg me-1"></i> Success!';
+        btn.style.background = 'linear-gradient(135deg, #16a34a, #22c55e)';
+
         setTimeout(() => {
             if (data.role === 'creator') {
                 window.location.href = '/dashboard/creator';
             } else {
                 window.location.href = '/dashboard/company';
             }
-        }, 900);
+        }, 800);
+
     } catch (err) {
-        showToast('Error verifying code. Please try again.', 'danger');
+        showStatus('Network error verifying code. Please try again.', 'danger');
         btn.disabled = false;
         btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify &amp; Authenticate';
     }
 }
 
-// Auto-send if email pre-filled from URL
-window.addEventListener('DOMContentLoaded', () => {
-    const emailVal = document.getElementById('otpEmail').value.trim();
-    if (emailVal) {
-        // Small delay so page renders first
-        setTimeout(() => sendOtpCode(), 400);
+// ── Auto Initialize on Load ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    startTimer(600);
+    const emailVal = document.getElementById('displayEmail').textContent.trim();
+    if (!emailVal || emailVal.includes('Enter your')) {
+        toggleEditEmail();
+    } else {
+        boxes[0].focus();
     }
 });
 </script>

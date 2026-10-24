@@ -1,0 +1,191 @@
+I am building an AI Content Creator Marketplace for a hackathon.
+
+Act as a senior product architect and technical interviewer. Interview me one question at a time to identify missing requirements, challenge assumptions, and define a realistic MVP.
+
+Our team has 5 members.
+
+At first we generate a project blueprint that consist of MVP and overall project layout with abstract functions and structed desgin.
+then we share that template to team members and we individually modify the abstract functions to real function, and frontend will develope UI.
+Any changes in the project structure should be shared with all team members.
+we maintain seperation in frontend and backend.
+
+Consistent developement is madatory with parallel programming.
+
+original round 1 problem description:'''
+Full challenge brief
+AI Content Creator Marketplace
+1. Background
+Generative AI tools have created a new category of creative professionals, including AI filmmakers, AI animators, and generative content creators. However, brands and creative agencies still lack an effective way to discover, evaluate, and engage creators with proven AI-production skills.
+
+Existing freelance marketplaces are not designed around AI-native creative workflows. Brands may struggle to verify creator capabilities, understand the tools and workflows behind generated content, manage licensing and commercial-use requirements, and collaborate efficiently through multiple generations and revisions.
+
+2. Challenge Statement
+Design and build an AI-native marketplace connecting AI creators with brands and creative agencies.
+
+The platform should help brands:
+
+Discover suitable AI creators
+Publish creative briefs
+Evaluate AI-specific portfolios
+Manage engagements from discovery through delivery
+3. Core Scope
+Creator Profiles & AI Portfolios
+Showcase videos, animations, graphics, and other AI-generated work, including:
+
+Tools/models used
+Skills
+Specialization
+Relevant workflow information
+Brand / Agency Briefs
+Allow brands to define:
+
+Campaign requirements
+Content type
+Style
+Format/aspect ratio
+Commercial-use requirements
+Creator Search & Filtering
+Enable brands to search and filter creators by:
+
+Skills
+Specialization
+Tools
+Content type
+Other relevant profile attributes
+4. Bonus Features
+Creator Verification Signals
+Help brands trust creator claims through visible indicators for:
+
+Verified tools
+Workflows
+Past work
+AI-Assisted Brief Builder
+Help brands turn a rough idea into a complete, structured creative brief.
+
+5. Deliverables
+Working prototype of creator profiles with AI portfolios, brief creation, and creator search.
+Short note on the profile and brief data model, including tools, skills, formats, and commercial-use fields.
+Short demo or a few slides showing the approach.
+6. Evaluation Criteria — 100 Points
+Criterion	Weight	What Judges Look For
+Creator Profiles & AI Portfolios	30%	Rich profiles showcasing AI-generated work, tools/models, skills, specialization, and workflows
+Brief Definition	20%	Briefs that clearly and completely capture content type, style, format/aspect ratio, and commercial-use requirements
+Discovery & Filtering	25%	Accurate search and filtering by skills and other attributes; sensible handling of empty results
+User Experience	15%	Easy flows for creators and brands; clear portfolio viewing
+Presentation & Demo	10%	Working prototype demonstrated clearly through a short demo or a few slides
+7. Bonus Credit
+Bonus credit may be earned for:
+
+Creator Verification Signals: Visible trust indicators for tools, workflows, and past work.
+AI-Assisted Brief Builder: Creating structured briefs from a rough idea.
+Bonus credit is added within the relevant evaluation criteria:
+
+Verification → Creator Profiles & AI Portfolios
+Brief Builder → Brief Definition
+Bonus credit is capped at approximately 5–10 points in total.
+''';
+
+important things to implement in reviewd project:'''
+# Feature Engineering Task: AI Content Creator Marketplace
+
+## Objective
+
+Enhance the existing AI Content Creator Marketplace with Semantic Search, Hybrid Job Search, RAG, a Creator–Brief Ranking Algorithm, and Named Entity Recognition (NER).
+
+First inspect the existing repository, project blueprint, database schema, API routes, authentication, frontend components, and deployed application architecture. Reuse existing infrastructure and conventions. Do not replace working functionality or introduce a separate, unnecessary backend.
+
+## 1. Semantic Search
+
+- Generate embeddings for creator profiles, portfolio project descriptions, and relevant brand briefs.
+- Include creator specialization, skills, tools/models, content types, visual styles, workflow descriptions, and portfolio summaries.
+- Store embeddings in an appropriate vector-capable database or existing vector store.
+- Implement semantic retrieval for creator discovery and brief-to-creator matching.
+- Support natural-language queries and meaningful results when exact keywords are absent.
+- Handle empty queries, missing embeddings, and embedding-generation failures gracefully.
+
+## 2. Hybrid Job Search
+
+- Combine existing keyword/full-text search with vector similarity search.
+- Search across creator profiles, portfolios, and relevant briefs.
+- Normalize and merge candidate rankings using Reciprocal Rank Fusion (RRF) or another justified fusion method.
+- Deduplicate candidates and support pagination, sorting, and existing metadata filters.
+- Use exact structured filters for mandatory requirements such as content type, aspect ratio, availability, and commercial-use eligibility.
+- Provide sensible empty-result states and a fallback if vector search is unavailable.
+
+## 3. RAG
+
+Implement retrieval-augmented generation for:
+- Converting rough brand ideas into structured creative briefs.
+- Answering questions about creator profiles, portfolio projects, tools, and documented workflows.
+- Explaining why a creator matches a brief using retrieved evidence.
+
+Retrieve relevant database records or approved knowledge documents before generating responses. Validate generated briefs against the existing schema. Do not let the LLM invent creator credentials, verification status, portfolio ownership, licensing permissions, or unsupported facts.
+
+## 4. Named Entity Recognition (NER)
+
+Extract and normalize entities from brand briefs, creator descriptions, and portfolio metadata.
+
+Required entity categories:
+- AI tools and models.
+- Skills and specializations.
+- Content types and creative styles.
+- Aspect ratios, dimensions, durations, and delivery formats.
+- Brand/product names, where relevant.
+- Deadlines and budgets when explicitly provided.
+- Commercial-use, exclusivity, attribution, and licensing requirements.
+
+Use an appropriate NLP model or structured LLM extraction. Normalize aliases to canonical database values and validate extracted data against approved catalogs and schemas.
+
+Store extraction provenance and distinguish creator-provided claims from independently verified information. Never interpret entity extraction as proof of a claim.
+
+## 5. Creator–Brief Ranking Algorithm
+
+Implement a deterministic, explainable baseline ranking system.
+
+First apply mandatory eligibility filters. Then score eligible creators using configurable signals such as:
+- Semantic similarity.
+- Hybrid search relevance.
+- Skill overlap.
+- Content-type and style compatibility.
+- AI tool/model compatibility.
+- Format and aspect-ratio compatibility.
+- Relevant portfolio evidence.
+- Experience and independently supported trust signals.
+
+Normalize features to comparable scales, define sensible weights, avoid double-counting correlated signals, and document the scoring formula. Treat licensing requirements and other mandatory constraints as hard filters rather than ordinary weighted preferences.
+
+Return a ranked list with match scores, component-level explanations, and supporting profile or portfolio evidence. Clearly distinguish verified attributes from self-reported claims. Do not label heuristic scores as calibrated probabilities.
+
+## Engineering requirements
+
+- Follow the repository's existing architecture, language, framework, and coding conventions.
+- Preserve existing authentication, authorization, database integrity, and API contracts wherever possible.
+- Add migrations, indexes, configuration, and environment-variable documentation as required.
+- Keep API keys and secrets on the server.
+- Add input validation, authorization checks, safe error handling, timeouts, and appropriate rate limits.
+- Prevent unauthorized access to private briefs and creator data.
+- Avoid making an LLM call for every ordinary search when deterministic retrieval suffices.
+- Make embedding generation asynchronous or background-driven where appropriate.
+- Add unit and integration tests for extraction, search, ranking, licensing eligibility, permissions, and failure cases.
+- Provide a baseline implementation before introducing complex models or infrastructure.
+
+## Acceptance criteria
+
+1. A natural-language search finds relevant creators even when wording differs.
+2. Exact tool and format filters work alongside semantic matching.
+3. A brand can create a structured brief from a rough idea.
+4. Extracted entities are validated and persisted correctly.
+5. Creator rankings are deterministic, explainable, and respect hard eligibility constraints.
+6. Search results show match explanations grounded in actual stored data.
+7. Empty results, missing embeddings, invalid model responses, and service failures are handled gracefully.
+8. Existing marketplace features continue to work.
+9. Tests pass, and setup and deployment instructions are documented.
+
+## Required deliverables
+
+Before implementation, report the existing architecture, affected modules, proposed schema changes, model/provider choices, and implementation plan.
+
+Then implement the features in small, testable increments. Report changed files, migrations, environment variables, test results, known limitations, and deployment steps. Do not claim a feature is complete unless it has been implemented and tested.
+''';
+web live on :'https://ai-content-creator-marketplace-ixc8.onrender.com/';
+project repo:'https://github.com/vishnuteja060606-png/AI-Content-Creator-Marketplace';

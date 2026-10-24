@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Explore Brands & Companies — Synapse Marketplace{% endblock %}
+
+{% block content %}
+<div class="bg-card border-bottom py-4 mb-4">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <span class="badge bg-primary-subtle text-primary mb-1">Company Directory</span>
+            <h2 class="fw-bold mb-1">Brands & Creative Agencies</h2>
+            <p class="text-secondary mb-0">Explore hiring companies, review their creative briefs, and check their brand profiles.</p>
+        </div>
+        <div class="col-md-4">
+            <form action="/companies" method="GET" class="input-group">
+                <input type="text" name="query" class="form-control" placeholder="Search by brand name or tag..." value="{{ query }}">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    {% if companies %}
+    <div class="row g-4">
+        {% for comp in companies %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card h-100 card-creator p-4 d-flex flex-column border">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <span class="badge bg-primary-subtle text-primary">{{ comp.industry or 'Media & Production' }}</span>
+                    <span class="badge bg-secondary-subtle text-secondary small">
+                        <i class="bi bi-eye me-1"></i>{{ comp.views_count or 0 }} Checks
+                    </span>
+                </div>
+
+                <h4 class="fw-bold mb-1 text-truncate">{{ comp.company_name }}</h4>
+                <div class="text-muted small mb-3"><i class="bi bi-geo-alt me-1"></i>{{ comp.location or 'Global / Remote' }}</div>
+
+                <p class="text-secondary small mb-3 flex-grow-1">
+                    {{ comp.description[:120] if comp.description else 'Company actively seeking AI creative talent.' }}...
+                </p>
+
+                {% if comp.tags %}
+                <div class="mb-3 d-flex flex-wrap gap-1">
+                    {% for tag in comp.tags.split(',')[:3] %}
+                    <span class="badge-tool" style="font-size: 0.72rem;">{{ tag.strip() }}</span>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                <div class="pt-3 border-top mt-auto d-flex justify-content-between align-items-center">
+                    <span class="small text-muted"><i class="bi bi-briefcase me-1"></i>{{ comp.jobs|length }} Active Briefs</span>
+                    <a href="/companies/{{ comp.id }}" class="btn btn-outline-primary btn-sm px-3">
+                        <i class="bi bi-building-check me-1"></i> Check Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-card">
+        <i class="bi bi-building fs-1 text-muted mb-2"></i>
+        <h4 class="fw-bold">No companies found</h4>
+        <p class="text-secondary small">Try clearing your search term to see all available brands.</p>
+        <div>
+            <a href="/companies" class="btn btn-primary btn-sm">View All Companies</a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

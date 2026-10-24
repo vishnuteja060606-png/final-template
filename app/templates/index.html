@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}Synapse — AI Content Creator Marketplace{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section text-center position-relative">
+    <div class="container py-5">
+        <div class="badge bg-primary bg-opacity-25 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill mb-3">
+            <i class="bi bi-sparkles me-1"></i> The AI-Native Creative Talent Platform
+        </div>
+        <h1 class="hero-title mb-4">
+            Discover the World's Best <br><span class="text-primary">AI Content Creators</span>
+        </h1>
+        <p class="hero-subtitle mb-5">
+            Connect directly with specialized filmmakers, animators, and generative media artists. Filter by AI tools, proprietary workflows, aspect ratios, and rich portfolio work.
+        </p>
+
+        <!-- Instant Search Box -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8">
+                <form action="/creators" method="GET" class="card shadow-lg p-2 border-0 rounded-4">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-0 ps-3"><i class="bi bi-search text-muted fs-5"></i></span>
+                        <input type="text" name="query" class="form-control form-control-lg border-0 shadow-none" placeholder="Search by skill, tool (e.g. Runway, Midjourney), or style...">
+                        <button type="submit" class="btn btn-primary btn-lg px-4 rounded-3 fw-semibold">
+                            Find Creators
+                        </button>
+                    </div>
+                </form>
+                <div class="d-flex flex-wrap justify-content-center gap-2 mt-3 text-secondary small">
+                    <span class="text-white-50">Popular:</span>
+                    <a href="/creators?tool=Runway" class="badge text-bg-dark text-decoration-none">Runway Gen-3</a>
+                    <a href="/creators?specialization=AI+Video" class="badge text-bg-dark text-decoration-none">AI Commercial Video</a>
+                    <a href="/creators?tool=Kling" class="badge text-bg-dark text-decoration-none">Kling AI</a>
+                    <a href="/creators?tool=ComfyUI" class="badge text-bg-dark text-decoration-none">ComfyUI Pipelines</a>
+                    <a href="/creators?aspect_ratio=9:16" class="badge text-bg-dark text-decoration-none">Vertical 9:16</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex justify-content-center gap-3">
+            <a href="/creators" class="btn btn-primary btn-lg px-4 shadow">Explore Creators</a>
+            <a href="/ai-builder" class="btn btn-outline-warning btn-lg px-4"><i class="bi bi-magic me-1"></i> AI Brief Builder</a>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works Section -->
+<section class="py-5 bg-white border-bottom">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h6 class="text-primary text-uppercase fw-bold tracking-wider">How It Works</h6>
+            <h2 class="fw-bold">Designed Specifically for Generative Workflows</h2>
+        </div>
+        <div class="row g-4 text-center">
+            <div class="col-md-3">
+                <div class="p-3">
+                    <div class="badge bg-primary-subtle text-primary p-3 rounded-circle fs-4 mb-3">
+                        <i class="bi bi-person-badge"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">1. Rich AI Profiles</h5>
+                    <p class="text-secondary small">Creators highlight specific models, tools, LoRA checkpoints, and end-to-end workflows.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3">
+                    <div class="badge bg-info-subtle text-info p-3 rounded-circle fs-4 mb-3">
+                        <i class="bi bi-collection-play"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">2. Searchable Work</h5>
+                    <p class="text-secondary small">Every portfolio item indexes content format, aspect ratio, prompt engineering, and tooling.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3">
+                    <div class="badge bg-warning-subtle text-warning p-3 rounded-circle fs-4 mb-3">
+                        <i class="bi bi-file-earmark-code"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">3. Structured Briefs</h5>
+                    <p class="text-secondary small">Brands post briefs with precise campaign requirements or use our Groq AI Assistant.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3">
+                    <div class="badge bg-success-subtle text-success p-3 rounded-circle fs-4 mb-3">
+                        <i class="bi bi-check2-circle"></i>
+                    </div>
+                    <h5 class="fw-bold mb-2">4. Direct Selection</h5>
+                    <p class="text-secondary small">Brands review verified trust signals and select creators for direct collaboration.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Creators -->
+<section class="py-5 bg-light">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h6 class="text-primary text-uppercase fw-bold">Featured Talent</h6>
+                <h3 class="fw-bold mb-0">Top Verified AI Creators</h3>
+            </div>
+            <a href="/creators" class="btn btn-outline-primary btn-sm">View All Creators <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        <div class="row g-4">
+            {% for creator in featured_creators %}
+            <div class="col-md-6 col-lg-3">
+                <div class="card h-100 card-creator">
+                    <div class="card-body p-4 text-center d-flex flex-column">
+                        <div class="position-relative mb-3">
+                            <img src="{{ creator.profile_image_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200' }}" alt="{{ creator.display_name }}" class="creator-avatar">
+                            {% if creator.is_verified %}
+                            <span class="position-absolute bottom-0 start-50 translate-middle-x badge-verified">
+                                <i class="bi bi-patch-check-fill"></i> Verified
+                            </span>
+                            {% endif %}
+                        </div>
+
+                        <h5 class="fw-bold mb-1">{{ creator.display_name }}</h5>
+                        <p class="text-secondary small mb-2">{{ creator.headline or 'AI Creative Specialist' }}</p>
+
+                        {% if creator.specialization %}
+                        <div class="mb-3">
+                            <span class="badge bg-primary-subtle text-primary px-2 py-1">{{ creator.specialization }}</span>
+                        </div>
+                        {% endif %}
+
+                        <div class="mb-3 d-flex flex-wrap justify-content-center gap-1">
+                            {% for tool in creator.tools_list()[:3] %}
+                            <span class="badge-tool">{{ tool }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mt-auto pt-3 border-top w-100 d-flex justify-content-between align-items-center">
+                            <span class="small text-muted"><i class="bi bi-images me-1"></i>{{ creator.portfolio_items|length }} Works</span>
+                            <a href="/creators/{{ creator.id }}" class="btn btn-primary btn-sm px-3">View Profile</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- Featured Creative Briefs -->
+<section class="py-5 bg-white border-top">
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h6 class="text-primary text-uppercase fw-bold">Active Opportunities</h6>
+                <h3 class="fw-bold mb-0">Recent Creative Briefs</h3>
+            </div>
+            <a href="/projects" class="btn btn-outline-primary btn-sm">Explore All Briefs <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        <div class="row g-4">
+            {% for job in featured_jobs %}
+            <div class="col-md-4">
+                <div class="card h-100 border rounded-4 shadow-sm p-4 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">{{ job.content_type }} • {{ job.aspect_ratio or '16:9' }}</span>
+                        {% if job.budget_range %}
+                        <span class="fw-bold text-primary small">{{ job.budget_range }}</span>
+                        {% endif %}
+                    </div>
+                    <h5 class="fw-bold mb-2">{{ job.title }}</h5>
+                    <p class="text-secondary small mb-3 flex-grow-1">{{ job.description[:120] }}...</p>
+                    
+                    <div class="mb-3">
+                        <div class="small text-muted mb-1"><i class="bi bi-tools me-1"></i>Tools:</div>
+                        <div class="d-flex flex-wrap gap-1">
+                            {% for t in job.tools_list()[:3] %}
+                            <span class="badge-tool">{{ t }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="pt-3 border-top d-flex justify-content-between align-items-center mt-auto">
+                        <span class="small text-muted"><i class="bi bi-building me-1"></i>{{ job.company.company_name if job.company else 'Verified Company' }}</span>
+                        <a href="/projects/{{ job.id }}" class="btn btn-outline-primary btn-sm">View Brief</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- AI Builder CTA Banner -->
+<section class="py-5 bg-light">
+    <div class="container py-4">
+        <div class="ai-panel text-center text-lg-start d-flex flex-column flex-lg-row align-items-center justify-content-between gap-4">
+            <div>
+                <div class="badge bg-warning text-dark px-3 py-1 rounded-pill mb-2 fw-semibold">
+                    <i class="bi bi-magic me-1"></i> Bonus AI Assistant
+                </div>
+                <h2 class="fw-bold text-white mb-2">Need Help Writing Your Creative Brief?</h2>
+                <p class="text-white-50 mb-0" style="max-width: 600px;">
+                    Type a rough idea (e.g. "cinematic sneaker commercial in 16:9"), and our Groq-powered AI will automatically structure complete campaign requirements, tools, and licensing terms.
+                </p>
+            </div>
+            <a href="/ai-builder" class="btn btn-warning btn-lg px-4 fw-bold shadow">
+                Try AI Brief Builder <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,414 @@
+{% extends "base.html" %}
+
+{% block title %}Brand & Agency Studio — Synapse{% endblock %}
+
+{% block content %}
+<div class="bg-card border-bottom py-4 mb-4">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <span class="badge bg-primary-subtle text-primary mb-1">Brand Studio</span>
+            <h2 class="fw-bold mb-0">{{ profile.company_name }}</h2>
+            <div class="text-secondary small">{{ profile.industry or 'Advertising & Media' }} &bull; {{ profile.location or 'Global' }}</div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="/ai-builder" class="btn btn-warning text-dark fw-bold">
+                <i class="bi bi-magic me-1"></i> AI Brief Builder
+            </a>
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createJobModal">
+                <i class="bi bi-plus-circle me-1"></i> Post New Brief
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <!-- Top Stats Row -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card p-4 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1">Active Briefs</div>
+                <div class="fs-2 fw-bold text-dark mb-1">{{ jobs|length }}</div>
+                <p class="text-secondary small mb-0">Published briefs matching with AI creators.</p>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-4 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1">Sent Proposals</div>
+                <div class="fs-2 fw-bold text-primary mb-1">{{ engagements|length }}</div>
+                <p class="text-secondary small mb-0">Direct creator proposals and outreach.</p>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-4 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1">Profile Checks</div>
+                <div class="fs-2 fw-bold text-warning mb-1">{{ profile.views_count }}</div>
+                <p class="text-secondary small mb-0">Verified creator inspections recorded in DB.</p>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card p-4 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1">Creator Discovery</div>
+                <div class="mb-2">
+                    <a href="/creators" class="btn btn-outline-primary btn-sm w-100">Browse Available Talent</a>
+                </div>
+                <p class="text-secondary small mb-0">Filter by Runway, Midjourney, and styles.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Creator Profile Checks Section (Feature: reflects creator profile checks in DB) -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0"><i class="bi bi-eye me-2 text-primary"></i>Creator Profile Checks</h4>
+                <p class="text-secondary small mb-0">Creators who have inspected your brand profile, stored and tracked in the database.</p>
+            </div>
+            <span class="badge bg-primary fs-6 px-3 py-2">
+                <i class="bi bi-graph-up me-1"></i> Total Views: {{ profile.views_count }}
+            </span>
+        </div>
+
+        {% if recent_creator_checks %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr class="text-secondary small">
+                        <th>Creator</th>
+                        <th>Specialization</th>
+                        <th>Viewer Type</th>
+                        <th>Checked At</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for check in recent_creator_checks %}
+                    <tr>
+                        <td>
+                            {% if check.creator %}
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 36px; height: 36px;">
+                                    {{ check.creator.display_name[:1] }}
+                                </div>
+                                <div>
+                                    <strong class="text-dark d-block">{{ check.creator.display_name }}</strong>
+                                    <span class="small text-muted">{{ check.creator.location or 'Global' }}</span>
+                                </div>
+                            </div>
+                            {% else %}
+                            <strong class="text-dark">Registered User #{{ check.viewer_user_id }}</strong>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if check.creator and check.creator.specialization %}
+                            <span class="badge bg-info-subtle text-info">{{ check.creator.specialization }}</span>
+                            {% else %}
+                            <span class="text-muted small">AI Creator</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary-subtle text-secondary text-uppercase small">{{ check.viewer_role }}</span>
+                        </td>
+                        <td class="small text-muted">
+                            {{ check.checked_at.strftime('%b %d, %Y %H:%M') }}
+                        </td>
+                        <td class="text-end">
+                            {% if check.creator %}
+                            <a href="/creators/{{ check.creator.id }}" class="btn btn-outline-primary btn-sm">
+                                View Portfolio
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-eye text-muted fs-3 mb-2"></i>
+            <p class="text-secondary small mb-0">No creator visits recorded yet. As creators explore your brand profile in the directory, visits will appear here in real-time.</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Active Briefs Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold mb-0"><i class="bi bi-briefcase me-2 text-primary"></i>My Published Creative Briefs</h4>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createJobModal">
+                <i class="bi bi-plus-lg me-1"></i> New Brief
+            </button>
+        </div>
+
+        {% if jobs %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr class="text-secondary small">
+                        <th>Title & Type</th>
+                        <th>Aspect / Format</th>
+                        <th>Required Tools</th>
+                        <th>Budget</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for job in jobs %}
+                    <tr>
+                        <td>
+                            <strong class="text-dark d-block">{{ job.title }}</strong>
+                            <span class="badge bg-light text-secondary border">{{ job.content_type }}</span>
+                        </td>
+                        <td class="small text-muted">
+                            {{ job.aspect_ratio or '16:9' }} &bull; {{ job.format or 'MP4' }}
+                        </td>
+                        <td>
+                            <div class="d-flex flex-wrap gap-1" style="max-width: 250px;">
+                                {% for t in job.tools_list()[:2] %}
+                                <span class="badge-tool" style="font-size: 0.7rem;">{{ t }}</span>
+                                {% endfor %}
+                            </div>
+                        </td>
+                        <td class="small fw-bold text-primary">{{ job.budget_range or 'Open' }}</td>
+                        <td>
+                            <span class="badge {% if job.status == 'published' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ job.status }}
+                            </span>
+                        </td>
+                        <td class="text-end">
+                            <a href="/projects/{{ job.id }}" class="btn btn-sm btn-outline-primary me-1">View</a>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deleteJob({{ job.id }})"><i class="bi bi-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-file-earmark-plus text-muted fs-3 mb-2"></i>
+            <p class="text-secondary small mb-3">You haven't posted any creative briefs yet.</p>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createJobModal">Post Your First Brief</button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Outgoing Engagements Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h4 class="fw-bold mb-3"><i class="bi bi-send me-2 text-primary"></i>Creator Proposals & Outreach</h4>
+        {% if engagements %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr class="text-secondary small">
+                        <th>Creator</th>
+                        <th>Proposal Message</th>
+                        <th>Proposed Budget</th>
+                        <th>Status</th>
+                        <th>Sent Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for eng in engagements %}
+                    <tr>
+                        <td>
+                            <strong class="text-dark d-block">{{ eng.creator.display_name if eng.creator else 'Creator' }}</strong>
+                            <a href="/creators/{{ eng.creator_id }}" class="small text-decoration-none">View Profile</a>
+                        </td>
+                        <td>
+                            <p class="small text-secondary mb-0" style="max-width: 320px;">{{ eng.message }}</p>
+                            {% if eng.job %}
+                            <span class="badge bg-light text-primary border mt-1">Brief: {{ eng.job.title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success">{{ eng.proposed_budget or 'Negotiable' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {% if eng.status == 'accepted' %}bg-success{% elif eng.status == 'declined' %}bg-danger{% else %}bg-warning text-dark{% endif %} text-uppercase">
+                                {{ eng.status }}
+                            </span>
+                        </td>
+                        <td class="small text-muted">{{ eng.created_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-people text-muted fs-3 mb-2"></i>
+            <p class="text-secondary small mb-0">No proposals sent yet. Explore creators and click "Select / Contact Creator" to initiate outreach.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Create Brief Modal -->
+<div class="modal fade" id="createJobModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Post a Creative Brief</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="createBriefForm" onsubmit="handleCreateBrief(event)">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Campaign Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="jobTitle" required placeholder="e.g. Cinematic AI Video Commercial: Quantum Sneaker">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Content Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="jobContentType" required>
+                                <option value="Video">AI Video</option>
+                                <option value="Animation">AI Animation</option>
+                                <option value="Image">AI Image / Key Visual</option>
+                                <option value="Graphic">AI Graphic & Advertising</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Project Overview & Concept <span class="text-danger">*</span></label>
+                            <textarea class="form-control" id="jobDescription" rows="3" required placeholder="Describe what you want to produce, the story, and visual direction..."></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Campaign Requirements & Deliverables</label>
+                            <textarea class="form-control" id="jobRequirements" rows="2" placeholder="e.g. 1x 30s Master Video in 16:9 4K, 2x 9:16 vertical cutdowns..."></textarea>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Aspect Ratio</label>
+                            <select class="form-select" id="jobAspectRatio">
+                                <option value="16:9">16:9 (Landscape)</option>
+                                <option value="9:16">9:16 (Vertical)</option>
+                                <option value="1:1">1:1 (Square)</option>
+                                <option value="4:5">4:5 (Portrait)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Visual Style</label>
+                            <input type="text" class="form-control" id="jobStyle" placeholder="Cinematic, Photorealistic, Cyberpunk">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Format</label>
+                            <input type="text" class="form-control" id="jobFormat" placeholder="MP4, ProRes, PNG">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Required Tools / Models</label>
+                            <input type="text" class="form-control" id="jobTools" placeholder="Runway Gen-3, Midjourney v6, Kling AI">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Required Skills</label>
+                            <input type="text" class="form-control" id="jobSkills" placeholder="AI Video Generation, Prompt Engineering">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Budget Range</label>
+                            <input type="text" class="form-control" id="jobBudget" placeholder="e.g. $3,000 - $5,000">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Commercial Rights</label>
+                            <input type="text" class="form-control" id="jobCommercial" value="Full Commercial Buyout">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="submitBriefBtn" class="btn btn-primary px-4">Publish Brief</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function getAuthHeaders(extraHeaders = {}) {
+    const headers = { ...extraHeaders };
+    try {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+    } catch (e) {}
+    return headers;
+}
+
+async function handleCreateBrief(event) {
+    event.preventDefault();
+    const btn = document.getElementById('submitBriefBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Publishing...';
+
+    const title = document.getElementById('jobTitle').value.trim();
+    const description = document.getElementById('jobDescription').value.trim();
+
+    if (!title || !description) {
+        showToast('Please provide both campaign title and description.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Publish Brief';
+        return;
+    }
+
+    const payload = {
+        title: title,
+        content_type: document.getElementById('jobContentType').value,
+        description: description,
+        campaign_requirements: (document.getElementById('jobRequirements').value || '').trim() || null,
+        aspect_ratio: document.getElementById('jobAspectRatio').value,
+        style: (document.getElementById('jobStyle').value || '').trim() || null,
+        format: (document.getElementById('jobFormat').value || '').trim() || null,
+        required_tools: (document.getElementById('jobTools').value || '').trim() || null,
+        required_skills: (document.getElementById('jobSkills').value || '').trim() || null,
+        budget_range: (document.getElementById('jobBudget').value || '').trim() || null,
+        commercial_use: (document.getElementById('jobCommercial').value || '').trim() || 'Full Commercial Buyout',
+        status: 'published'
+    };
+
+    try {
+        const res = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Creative brief published successfully!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(data.detail || 'Failed to publish brief.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = 'Publish Brief';
+        }
+    } catch (e) {
+        showToast(e.message || 'Error publishing brief.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Publish Brief';
+    }
+}
+
+async function deleteJob(jobId) {
+    if (!confirm('Are you sure you want to delete this brief?')) return;
+    try {
+        const res = await fetch(`/api/jobs/${jobId}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Brief deleted.', 'info');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast('Failed to delete brief.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error deleting brief.', 'danger');
+    }
+}
+</script>
+{% endblock %}

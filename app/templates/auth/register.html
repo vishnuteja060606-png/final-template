@@ -1,0 +1,133 @@
+{% extends "base.html" %}
+
+{% block title %}Join Marketplace — Synapse AI Creator Marketplace{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-sm rounded-4 p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <span class="badge bg-primary p-2 rounded-3 fs-5 mb-2"><i class="bi bi-cpu-fill"></i></span>
+                    <h3 class="fw-bold">Create Your Account</h3>
+                    <p class="text-secondary small">Join the premiere AI-native creative talent platform</p>
+                </div>
+
+                <div id="registerAlert" class="alert alert-danger d-none small"></div>
+
+                <form id="registerForm" onsubmit="handleRegisterSubmit(event)">
+                    <!-- Account Type Selector -->
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold">I want to join as a:</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="role" id="roleCreator" value="creator" checked onchange="toggleRoleLabel(this.value)">
+                                <label class="btn btn-outline-primary w-100 py-3 text-center rounded-3" for="roleCreator">
+                                    <i class="bi bi-palette fs-4 d-block mb-1"></i>
+                                    <span class="fw-bold d-block">AI Creator</span>
+                                    <span class="small text-muted" style="font-size: 0.75rem;">Showcase Work</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="role" id="roleCompany" value="company" onchange="toggleRoleLabel(this.value)">
+                                <label class="btn btn-outline-primary w-100 py-3 text-center rounded-3" for="roleCompany">
+                                    <i class="bi bi-building fs-4 d-block mb-1"></i>
+                                    <span class="fw-bold d-block">Brand / Agency</span>
+                                    <span class="small text-muted" style="font-size: 0.75rem;">Hire Talent</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="name" id="nameLabel" class="form-label small fw-semibold">Creator Display Name</label>
+                        <input type="text" class="form-control" id="name" required placeholder="Elena Rostova">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="email" class="form-label small fw-semibold">Email Address</label>
+                        <input type="email" class="form-control" id="email" required placeholder="name@domain.com">
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="password" class="form-label small fw-semibold">Password (min 6 characters)</label>
+                        <input type="password" class="form-control" id="password" minlength="6" required placeholder="••••••••">
+                    </div>
+
+                    <button type="submit" id="regBtn" class="btn btn-primary w-100 py-2 fw-semibold">
+                        Get Started
+                    </button>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <p class="small text-secondary mb-0">Already have an account? <a href="/login" class="text-primary fw-semibold">Log in</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleRoleLabel(role) {
+    const label = document.getElementById('nameLabel');
+    const input = document.getElementById('name');
+    if (role === 'creator') {
+        label.textContent = 'Creator Display Name';
+        input.placeholder = 'Elena Rostova';
+    } else {
+        label.textContent = 'Company or Agency Name';
+        input.placeholder = 'OmniSport Global';
+    }
+}
+
+async function handleRegisterSubmit(event) {
+    event.preventDefault();
+    const btn = document.getElementById('regBtn');
+    const alertBox = document.getElementById('registerAlert');
+    const role = document.querySelector('input[name="role"]:checked').value;
+    const name = document.getElementById('name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Creating Account...';
+    alertBox.classList.add('d-none');
+
+    try {
+        const res = await fetch('/api/auth/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role, name, email, password })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            alertBox.textContent = formatErrorMessage(data.detail) || 'Registration failed.';
+            alertBox.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = 'Get Started';
+            return;
+        }
+
+        if (data.access_token) {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('user_role', data.role);
+            localStorage.setItem('user_id', data.user_id);
+        }
+
+        showToast('Account created successfully!', 'success');
+        if (data.role === 'creator') {
+            window.location.href = '/dashboard/creator';
+        } else {
+            window.location.href = '/dashboard/company';
+        }
+    } catch (err) {
+        alertBox.textContent = 'Network or server error. Please try again.';
+        alertBox.classList.remove('d-none');
+        btn.disabled = false;
+        btn.innerHTML = 'Get Started';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block title %}Creator Studio Dashboard — Synapse{% endblock %}
+
+{% block content %}
+<div class="bg-white border-bottom py-4 mb-4 shadow-sm">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <div class="d-flex align-items-center gap-2 mb-1">
+                <span class="badge bg-primary-subtle text-primary fw-bold">Creator Studio</span>
+                {% if profile.published_uploads_count >= 2 %}
+                <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check-circle-fill me-1"></i>Published & Discoverable</span>
+                {% else %}
+                <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-eye-slash-fill me-1"></i>Draft (Upload 2 Works to Publish)</span>
+                {% endif %}
+            </div>
+            <h2 class="fw-bold mb-0 text-dark">Welcome back, {{ profile.display_name }}</h2>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                <i class="bi bi-pencil me-1"></i> Edit Profile & Specs
+            </button>
+            <button class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bi bi-cloud-arrow-up me-1"></i> Add Portfolio Work
+            </button>
+            <a href="/creators/{{ profile.id }}" class="btn btn-outline-primary">
+                <i class="bi bi-box-arrow-up-right me-1"></i> View Public Profile
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <!-- Mandatory 2 Uploads Alert Banner (Reviewer Requirement) -->
+    {% if profile.published_uploads_count < 2 %}
+    <div class="alert alert-warning border-warning border-2 rounded-4 p-4 mb-4 shadow-sm">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+            <div class="d-flex align-items-center">
+                <div class="p-3 bg-warning text-dark rounded-circle me-3 fs-3">
+                    <i class="bi bi-exclamation-octagon-fill"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-1 text-dark">Creator Profile is in Draft Mode</h5>
+                    <p class="small text-secondary mb-0">
+                        Reviewer Requirement: <strong>At least 2 uploads mandatory</strong> before your profile is published to brands and search.
+                        Current Progress: <strong>{{ profile.published_uploads_count }}/2 Uploads</strong> completed.
+                    </p>
+                </div>
+            </div>
+            <button class="btn btn-warning text-dark fw-bold px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bi bi-upload me-2"></i>Upload Work #{{ profile.published_uploads_count + 1 }}
+            </button>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-success border-success rounded-4 p-3 mb-4 shadow-sm">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-check-circle-fill text-success fs-3 me-3"></i>
+                <div>
+                    <strong class="text-dark">Profile Verified & Published</strong>
+                    <div class="small text-secondary">You have uploaded {{ profile.published_uploads_count }} works. Your profile is live in creator search and discovery.</div>
+                </div>
+            </div>
+            <span class="badge bg-success px-3 py-2">Discoverable to Brands</span>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Top Metrics Row -->
+    <div class="row g-4 mb-4">
+        <!-- Views Count -->
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1"><i class="bi bi-eye text-primary me-1"></i>Profile Views</div>
+                <div class="fs-2 fw-bold text-dark mb-0">{{ profile.views_count }}</div>
+                <span class="text-secondary small">Total brand impressions</span>
+            </div>
+        </div>
+
+        <!-- Accepted Connections -->
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1"><i class="bi bi-people text-info me-1"></i>Connections</div>
+                <div class="fs-2 fw-bold text-info mb-0">{{ profile.accepted_connections_count }}</div>
+                <span class="text-secondary small">Connected AI creators</span>
+            </div>
+        </div>
+
+        <!-- Reviews & Rating -->
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1"><i class="bi bi-star-fill text-warning me-1"></i>Client Reviews</div>
+                <div class="fs-2 fw-bold text-warning mb-0">⭐ {{ profile.average_rating }}</div>
+                <span class="text-secondary small">{{ profile.review_count }} verified reviews</span>
+            </div>
+        </div>
+
+        <!-- Base Rate -->
+        <div class="col-md-3">
+            <div class="card p-3 border-0 shadow-sm rounded-4 h-100">
+                <div class="small fw-bold text-muted text-uppercase mb-1"><i class="bi bi-cash-coin text-success me-1"></i>Base Rate</div>
+                <div class="fs-2 fw-bold text-success mb-0" data-inr="{{ profile.hourly_rate_inr }}" data-suffix="/hr">₹{{ profile.hourly_rate_inr }}/hr</div>
+                <span class="text-secondary small">Primary currency in INR</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Portfolio Management Section with PIN / UNPIN Feature -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-collection-play me-2 text-primary"></i>My Portfolio Works ({{ portfolio_items|length }})</h4>
+                <p class="text-muted small mb-0">Pin up to 3 best works to highlight them at the top of your public profile</p>
+            </div>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                <i class="bi bi-plus-lg me-1"></i> Add Work
+            </button>
+        </div>
+
+        {% if portfolio_items %}
+        <div class="row g-4">
+            {% for item in portfolio_items %}
+            <div class="col-md-6 col-lg-4">
+                <div class="portfolio-card h-100 p-3 d-flex flex-column border rounded-4 bg-white {% if item.is_pinned %}border-warning border-2 shadow-sm{% endif %}">
+                    <div class="position-relative mb-2">
+                        {% if item.mime_type.startswith('video') %}
+                        <video class="w-100 rounded-3" style="height: 160px; object-fit: cover;" muted>
+                            <source src="{{ item.file_path }}">
+                        </video>
+                        {% else %}
+                        <img src="{{ item.file_path }}" alt="{{ item.title }}" class="w-100 rounded-3" style="height: 160px; object-fit: cover;">
+                        {% endif %}
+                        <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75">{{ item.content_type }}</span>
+                        {% if item.is_pinned %}
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark fw-bold">
+                            <i class="bi bi-star-fill me-1"></i>Pinned
+                        </span>
+                        {% endif %}
+                    </div>
+
+                    <h6 class="fw-bold mb-1 text-dark">{{ item.title }}</h6>
+                    <p class="small text-secondary mb-2 flex-grow-1">{{ item.description[:70] if item.description else 'No description' }}...</p>
+                    
+                    <div class="d-flex flex-wrap gap-1 mb-3">
+                        {% if item.aspect_ratio %}<span class="badge bg-secondary-subtle text-secondary small">{{ item.aspect_ratio }}</span>{% endif %}
+                        {% if item.format %}<span class="badge bg-light text-dark border small">{{ item.format }}</span>{% endif %}
+                        <span class="badge bg-light text-muted border small"><i class="bi bi-eye me-1"></i>{{ item.views_count }} views</span>
+                    </div>
+
+                    <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto">
+                        <!-- Pin / Unpin Button (Reviewer Feature) -->
+                        {% if item.is_pinned %}
+                        <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="togglePinWork({{ item.id }}, false)" title="Unpin from top">
+                            <i class="bi bi-star-fill me-1"></i>Pinned
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-warning" onclick="togglePinWork({{ item.id }}, true)" title="Pin as featured work (max 3)">
+                            <i class="bi bi-star me-1"></i>Pin Best Work
+                        </button>
+                        {% endif %}
+
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openMediaModal('{{ item.title }}', '{{ item.file_path }}', '{{ item.content_type }}', '{{ item.description|escape }}', '{{ item.format }}', '{{ item.aspect_ratio }}', '{{ item.tools_models }}', '{{ item.skills }}')">
+                                Preview
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="deletePortfolioItem({{ item.id }})">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 border rounded-4 bg-light">
+            <i class="bi bi-cloud-arrow-up text-muted fs-1 mb-2"></i>
+            <h5 class="fw-bold">Your portfolio is empty</h5>
+            <p class="text-secondary small mb-3">Upload at least 2 works to publish your profile and become discoverable by brands.</p>
+            <button class="btn btn-primary btn-sm px-3" data-bs-toggle="modal" data-bs-target="#uploadModal">
+                Upload Your First Work
+            </button>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Creator Connections Section (Reviewer Feature) -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h4 class="fw-bold mb-3 text-dark"><i class="bi bi-people-fill text-info me-2"></i>Creator Connections Network</h4>
+        {% if connections_summary.connections %}
+        <div class="row g-3">
+            {% for conn in connections_summary.connections %}
+            {% set other_id = conn.receiver_id if conn.requester_id == profile.id else conn.requester_id %}
+            {% set other_name = conn.receiver_name if conn.requester_id == profile.id else conn.requester_name %}
+            {% set other_spec = conn.receiver_specialization if conn.requester_id == profile.id else conn.requester_specialization %}
+            <div class="col-md-6 col-lg-4">
+                <div class="p-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="fw-bold text-dark">{{ other_name }}</div>
+                        <span class="badge bg-secondary-subtle text-secondary small">{{ other_spec or 'AI Creator' }}</span>
+                    </div>
+                    <a href="/creators/{{ other_id }}" class="btn btn-outline-primary btn-sm">View Profile</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="bi bi-person-plus fs-3 mb-2 d-block"></i>
+            <p class="small mb-0">No active creator connections yet. Explore creative portfolios to connect with other AI artists!</p>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Checked Companies Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-buildings me-2 text-primary"></i>Companies & Brands You've Checked</h4>
+                <p class="text-secondary small mb-0">Track company profiles, brand briefs, and creative opportunities you have explored.</p>
+            </div>
+            <a href="/companies" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-search me-1"></i> Browse Directory
+            </a>
+        </div>
+
+        {% if checked_companies %}
+        <div class="row g-3">
+            {% for company in checked_companies %}
+            <div class="col-md-6 col-lg-4">
+                <div class="p-3 border rounded-3 h-100 d-flex flex-column bg-light">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div>
+                            <h6 class="fw-bold mb-0 text-dark">{{ company.company_name }}</h6>
+                            <span class="badge bg-secondary-subtle text-secondary small">{{ company.industry or 'Brand' }}</span>
+                        </div>
+                        <span class="badge bg-primary-subtle text-primary small">
+                            <i class="bi bi-eye me-1"></i>{{ company.views_count }} views
+                        </span>
+                    </div>
+                    <p class="text-secondary small mb-3 flex-grow-1">
+                        {{ company.description[:80] if company.description else 'Verified commercial brand on Synapse.' }}...
+                    </p>
+                    <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto">
+                        <span class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ company.location or 'Global' }}</span>
+                        <a href="/companies/{{ company.id }}" class="btn btn-outline-primary btn-sm py-1 px-3">
+                            Check Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-buildings text-muted fs-3 mb-2"></i>
+            <p class="text-secondary small mb-2">You haven't checked any brand profiles yet.</p>
+            <a href="/companies" class="btn btn-primary btn-sm">Discover Brands & Briefs</a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Inbound Brand Proposals Section -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h4 class="fw-bold mb-3 text-dark"><i class="bi bi-inbox me-2 text-primary"></i>Inbound Brand Proposals</h4>
+        {% if engagements %}
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr class="text-secondary small">
+                        <th>Brand / Company</th>
+                        <th>Project Proposal</th>
+                        <th>Proposed Budget</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for eng in engagements %}
+                    <tr>
+                        <td>
+                            <strong class="text-dark">{{ eng.company.company_name if eng.company else 'Brand' }}</strong>
+                        </td>
+                        <td>
+                            <p class="small text-secondary mb-0" style="max-width: 320px;">{{ eng.message }}</p>
+                            {% if eng.job %}
+                            <a href="/projects/{{ eng.job_id }}" class="badge bg-light text-primary border text-decoration-none mt-1">
+                                Linked Brief: {{ eng.job.title }}
+                            </a>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-success-subtle text-success">{{ eng.proposed_budget or 'Negotiable' }}</span>
+                        </td>
+                        <td>
+                            <span class="badge {% if eng.status == 'accepted' %}bg-success{% elif eng.status == 'declined' %}bg-danger{% else %}bg-warning text-dark{% endif %} text-uppercase">
+                                {{ eng.status }}
+                            </span>
+                        </td>
+                        <td class="small text-muted">{{ eng.created_at.strftime('%b %d') }}</td>
+                        <td class="text-end">
+                            {% if eng.status == 'pending' %}
+                            <button class="btn btn-sm btn-outline-success me-1" onclick="updateEngagementStatus({{ eng.id }}, 'accepted')">Accept</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="updateEngagementStatus({{ eng.id }}, 'declined')">Decline</button>
+                            {% else %}
+                            <span class="small text-muted">Completed</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="bi bi-envelope-open text-muted fs-3 mb-2"></i>
+            <p class="text-secondary small mb-0">No incoming proposals yet. Ensure your portfolio and specifications are up to date to get discovered!</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Upload Portfolio Modal -->
+<div class="modal fade" id="uploadModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Add AI Portfolio Work</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="uploadWorkForm" onsubmit="handlePortfolioUpload(event)">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Work Title <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="title" required placeholder="e.g. Cyberpunk Cinematic Spec Commercial">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Content Type <span class="text-danger">*</span></label>
+                            <select class="form-select" name="content_type" required>
+                                <option value="Video">AI Video</option>
+                                <option value="Animation">AI Animation</option>
+                                <option value="Image">AI Image / Key Visual</option>
+                                <option value="Graphic">AI Graphic & Design</option>
+                                <option value="3D">Generative 3D</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Media File <span class="text-danger">*</span></label>
+                            <input type="file" class="form-control" name="file" required accept=".mp4,.webm,.mov,.png,.jpg,.jpeg,.webp,.gif,.svg">
+                            <div class="form-text">Supports video (MP4, WebM, MOV) and images (PNG, JPG, SVG). Max 50MB.</div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Aspect Ratio</label>
+                            <select class="form-select" name="aspect_ratio">
+                                <option value="16:9">16:9 (Landscape)</option>
+                                <option value="9:16">9:16 (Vertical)</option>
+                                <option value="1:1">1:1 (Square)</option>
+                                <option value="4:5">4:5 (Portrait)</option>
+                                <option value="21:9">21:9 (Cinemascope)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Format</label>
+                            <input type="text" class="form-control" name="format" placeholder="e.g. MP4, PNG, 4K">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Specialization</label>
+                            <input type="text" class="form-control" name="specialization" placeholder="e.g. AI Video">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">AI Tools & Models Used</label>
+                            <input type="text" class="form-control" name="tools_models" placeholder="Runway Gen-3, Midjourney v6, Topaz Video AI">
+                            <div class="form-text">Comma-separated tools/models used to generate this piece.</div>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Skills</label>
+                            <input type="text" class="form-control" name="skills" placeholder="Prompt Engineering, Motion Design, Color Grading">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Description</label>
+                            <textarea class="form-control" name="description" rows="2" placeholder="Brief description of the concept and creative objectives..."></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Workflow Details (Optional)</label>
+                            <textarea class="form-control" name="workflow" rows="2" placeholder="Describe the generation pipeline (e.g. prompt bible, upscaling technique)..."></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="uploadSubmitBtn" class="btn btn-primary px-4">Upload Work</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Edit Creator Profile & Specifications</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editProfileForm" onsubmit="handleProfileUpdate(event)">
+                <div class="modal-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Display Name</label>
+                            <input type="text" class="form-control" id="profDisplayName" value="{{ profile.display_name }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Specialization</label>
+                            <input type="text" class="form-control" id="profSpecialization" value="{{ profile.specialization or '' }}" placeholder="AI Video, Generative Advertising...">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Base Rate (INR ₹ / hour)</label>
+                            <input type="number" class="form-control" id="profRateInr" value="{{ profile.hourly_rate_inr or 1500 }}" min="100" step="50">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Location / Availability</label>
+                            <input type="text" class="form-control" id="profLocation" value="{{ profile.location or '' }}" placeholder="Mumbai, India / Remote">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Headline</label>
+                            <input type="text" class="form-control" id="profHeadline" value="{{ profile.headline or '' }}" placeholder="e.g. AI Commercial Filmmaker & Generative Director">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Biography</label>
+                            <textarea class="form-control" id="profBio" rows="3">{{ profile.bio or '' }}</textarea>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">AI Tools & Models</label>
+                            <input type="text" class="form-control" id="profTools" value="{{ profile.tools_models or '' }}" placeholder="Runway Gen-3, Midjourney v6, Kling AI, ComfyUI">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Skills</label>
+                            <input type="text" class="form-control" id="profSkills" value="{{ profile.skills or '' }}" placeholder="Prompt Engineering, Motion Design, LoRA Training">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Generative Workflow & Specs</label>
+                            <textarea class="form-control" id="profWorkflow" rows="2" placeholder="Describe your technical specifications, render rig, resolutions (4K), and pipeline...">{{ profile.workflow or '' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="updateProfileBtn" class="btn btn-primary px-4">Save Profile</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+async function handlePortfolioUpload(event) {
+    event.preventDefault();
+    const btn = document.getElementById('uploadSubmitBtn');
+    const form = document.getElementById('uploadWorkForm');
+    const formData = new FormData(form);
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Uploading & Indexing...';
+
+    try {
+        const res = await fetch('/api/portfolio', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.detail || 'Upload failed. Please check file format.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = 'Upload Work';
+            return;
+        }
+
+        showToast('Work uploaded successfully!', 'success');
+        setTimeout(() => window.location.reload(), 1000);
+    } catch (err) {
+        showToast('Error uploading file.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Upload Work';
+    }
+}
+
+async function deletePortfolioItem(itemId) {
+    if (!confirm('Are you sure you want to delete this portfolio item?')) return;
+    try {
+        const res = await fetch(`/api/portfolio/${itemId}`, { method: 'DELETE' });
+        if (res.ok) {
+            showToast('Item deleted.', 'info');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast('Failed to delete item.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error deleting item.', 'danger');
+    }
+}
+
+async function handleProfileUpdate(event) {
+    event.preventDefault();
+    const btn = document.getElementById('updateProfileBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    const payload = {
+        display_name: document.getElementById('profDisplayName').value.trim(),
+        specialization: document.getElementById('profSpecialization').value.trim(),
+        headline: document.getElementById('profHeadline').value.trim(),
+        bio: document.getElementById('profBio').value.trim(),
+        tools_models: document.getElementById('profTools').value.trim(),
+        skills: document.getElementById('profSkills').value.trim(),
+        workflow: document.getElementById('profWorkflow').value.trim(),
+        location: document.getElementById('profLocation').value.trim(),
+        hourly_rate_inr: parseInt(document.getElementById('profRateInr').value) || 1500
+    };
+
+    try {
+        const res = await fetch(`/api/creators/{{ profile.id }}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (res.ok) {
+            showToast('Profile updated!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast('Failed to update profile.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = 'Save Profile';
+        }
+    } catch (e) {
+        showToast('Error updating profile.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Save Profile';
+    }
+}
+
+async function updateEngagementStatus(engagementId, newStatus) {
+    try {
+        const res = await fetch(`/api/engagements/${engagementId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) {
+            showToast(`Proposal ${newStatus}!`, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast('Failed to update proposal.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error updating proposal.', 'danger');
+    }
+}
+</script>
+{% endblock %}

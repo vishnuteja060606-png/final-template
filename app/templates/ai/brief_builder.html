@@ -1,0 +1,289 @@
+{% extends "base.html" %}
+
+{% block title %}AI Brief Builder — Synapse Marketplace{% endblock %}
+
+{% block content %}
+<div class="bg-dark text-white py-5 mb-4 border-bottom border-secondary border-opacity-25">
+    <div class="container text-center text-md-start">
+        <div class="badge bg-warning text-dark px-3 py-1 rounded-pill mb-2 fw-semibold">
+            <i class="bi bi-stars me-1"></i> AI-Assisted Brief Generation
+        </div>
+        <h1 class="fw-bold text-white mb-2">AI Creative Brief Builder</h1>
+        <p class="text-white-50 mb-0" style="max-width: 650px;">
+            Convert a rough concept into a production-ready creative brief with required tools, aspect ratios, deliverables, and licensing. Powered by Groq LLM with deterministic fallback.
+        </p>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row g-4">
+        <!-- Input Column -->
+        <div class="col-lg-5" style="z-index: 0;">
+            <div class="card p-4 border-0 shadow-sm rounded-4 bg-white sticky-top" style="top: 80px;">
+                <h5 class="fw-bold mb-3"><i class="bi bi-lightbulb text-warning me-2"></i>Describe Your Concept</h5>
+                <form id="aiPromptForm" onsubmit="handleGenerateBrief(event)">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Rough Project Idea <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="roughPrompt" rows="4" required placeholder="e.g. I need a short cinematic AI video commercial for our new running shoe with impossible camera angles and cyber-city reflections."></textarea>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-semibold">Brand / Industry Context (Optional)</label>
+                        <input type="text" class="form-control" id="brandContext" placeholder="e.g. OmniSport Footwear (Street Athletics)">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small text-muted">Try sample prompts:</label>
+                        <div class="d-flex flex-column gap-1">
+                            <button type="button" class="btn btn-sm btn-light text-start text-truncate" onclick="setPrompt('High-energy 9:16 vertical video ad for an energy drink with fast cuts and bold 3D typography', 'Volt Energy')">
+                                <i class="bi bi-arrow-right-short text-primary"></i> 9:16 Energy Drink Social Hook
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light text-start text-truncate" onclick="setPrompt('Cinematic 16:9 commercial trailer for a cyberpunk luxury electric vehicle with volumetric fog and photoreal lighting', 'Aether Motors')">
+                                <i class="bi bi-arrow-right-short text-primary"></i> 16:9 Luxury EV Reveal Commercial
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light text-start text-truncate" onclick="setPrompt('Studio product photography series with liquid water refractions and botanical elements for high-end perfume', 'Luxe Botanica')">
+                                <i class="bi bi-arrow-right-short text-primary"></i> 1:1 Luxury Perfume Key Visuals
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="generateBriefBtn" class="btn btn-warning w-100 py-2 fw-bold text-dark shadow-sm">
+                        <i class="bi bi-stars me-1"></i> Generate Structured Brief
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Generated Output Column -->
+        <div class="col-lg-7">
+            <div id="aiOutputPlaceholder" class="card p-5 text-center border-0 shadow-sm rounded-4 bg-white">
+                <i class="bi bi-magic text-warning fs-1 mb-2"></i>
+                <h4 class="fw-bold mb-2">Structured Brief Assistant</h4>
+                <p class="text-secondary small mb-0" style="max-width: 420px; margin: 0 auto;">
+                    Type your rough creative idea on the left and click "Generate". The assistant will populate technical specs, tool suggestions, and commercial requirements for you to review and edit.
+                </p>
+            </div>
+
+            <!-- Result Card (Hidden until generated) -->
+            <div id="aiResultCard" class="card p-4 p-md-5 border-0 shadow-sm rounded-4 bg-white d-none">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <span id="aiSourceBadge" class="badge bg-success-subtle text-success border border-success-subtle">
+                        <i class="bi bi-check-circle me-1"></i> Generated Draft
+                    </span>
+                    <span class="small text-muted"><i class="bi bi-pencil me-1"></i>Editable Fields</span>
+                </div>
+
+                <form id="saveBriefForm" onsubmit="handleSaveAIBrief(event)">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label small fw-semibold">Title</label>
+                            <input type="text" class="form-control" id="resTitle" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Content Type</label>
+                            <select class="form-select" id="resContentType">
+                                <option value="Video">Video</option>
+                                <option value="Animation">Animation</option>
+                                <option value="Image">Image</option>
+                                <option value="Graphic">Graphic</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Project Overview</label>
+                            <textarea class="form-control" id="resDescription" rows="3" required></textarea>
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Campaign Requirements</label>
+                            <textarea class="form-control" id="resRequirements" rows="3"></textarea>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Aspect Ratio</label>
+                            <input type="text" class="form-control" id="resAspectRatio">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Style</label>
+                            <input type="text" class="form-control" id="resStyle">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label small fw-semibold">Format</label>
+                            <input type="text" class="form-control" id="resFormat">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Recommended AI Tools</label>
+                            <input type="text" class="form-control" id="resTools">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Required Skills</label>
+                            <input type="text" class="form-control" id="resSkills">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Target Specialization</label>
+                            <input type="text" class="form-control" id="resSpec">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Budget Range</label>
+                            <input type="text" class="form-control" id="resBudget">
+                        </div>
+
+                        <div class="col-12">
+                            <label class="form-label small fw-semibold">Commercial Rights</label>
+                            <input type="text" class="form-control" id="resCommercial">
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="copyBriefAsJson()">
+                            <i class="bi bi-clipboard me-1"></i> Copy JSON
+                        </button>
+                        <button type="submit" id="saveBriefBtn" class="btn btn-primary px-4">
+                            <i class="bi bi-cloud-check me-1"></i> Save & Publish Brief
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+let lastGeneratedBrief = null;
+
+function setPrompt(promptText, brandText) {
+    document.getElementById('roughPrompt').value = promptText;
+    document.getElementById('brandContext').value = brandText || '';
+}
+
+async function handleGenerateBrief(event) {
+    event.preventDefault();
+    const btn = document.getElementById('generateBriefBtn');
+    const prompt = document.getElementById('roughPrompt').value.trim();
+    const companyContext = document.getElementById('brandContext').value.trim();
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Synthesizing Brief...';
+
+    try {
+        const res = await fetch('/api/ai/brief-builder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt, company_context: companyContext || null })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            showToast('Failed to generate brief.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-stars me-1"></i> Generate Structured Brief';
+            return;
+        }
+
+        lastGeneratedBrief = data;
+
+        // Populate fields
+        document.getElementById('resTitle').value = data.title || '';
+        document.getElementById('resContentType').value = data.content_type || 'Video';
+        document.getElementById('resDescription').value = data.description || '';
+        document.getElementById('resRequirements').value = data.campaign_requirements || '';
+        document.getElementById('resAspectRatio').value = data.aspect_ratio || '16:9';
+        document.getElementById('resStyle').value = data.style || 'Cinematic';
+        document.getElementById('resFormat').value = data.format || 'MP4';
+        document.getElementById('resTools').value = data.required_tools || '';
+        document.getElementById('resSkills').value = data.required_skills || '';
+        document.getElementById('resSpec').value = data.specialization || '';
+        document.getElementById('resBudget').value = data.budget_range || '$2,000 - $5,000';
+        document.getElementById('resCommercial').value = data.commercial_use || 'Full Commercial Buyout';
+
+        const badge = document.getElementById('aiSourceBadge');
+        if (data.source === 'groq') {
+            badge.className = 'badge bg-success-subtle text-success border border-success-subtle';
+            badge.innerHTML = '<i class="bi bi-lightning-charge me-1"></i> Generated via Groq LLM';
+        } else {
+            badge.className = 'badge bg-info-subtle text-info border border-info-subtle';
+            badge.innerHTML = '<i class="bi bi-cpu me-1"></i> Generated via Smart Fallback Template';
+        }
+
+        document.getElementById('aiOutputPlaceholder').classList.add('d-none');
+        document.getElementById('aiResultCard').classList.remove('d-none');
+        showToast('Brief generated! You can now review and edit before saving.', 'success');
+    } catch (err) {
+        showToast('Error generating brief.', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-stars me-1"></i> Generate Structured Brief';
+    }
+}
+
+async function handleSaveAIBrief(event) {
+    event.preventDefault();
+    const btn = document.getElementById('saveBriefBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    const payload = {
+        title: document.getElementById('resTitle').value.trim(),
+        content_type: document.getElementById('resContentType').value,
+        description: document.getElementById('resDescription').value.trim(),
+        campaign_requirements: document.getElementById('resRequirements').value.trim() || null,
+        aspect_ratio: document.getElementById('resAspectRatio').value.trim() || null,
+        style: document.getElementById('resStyle').value.trim() || null,
+        format: document.getElementById('resFormat').value.trim() || null,
+        required_tools: document.getElementById('resTools').value.trim() || null,
+        required_skills: document.getElementById('resSkills').value.trim() || null,
+        specialization: document.getElementById('resSpec').value.trim() || null,
+        budget_range: document.getElementById('resBudget').value.trim() || null,
+        commercial_use: document.getElementById('resCommercial').value.trim() || 'Full Commercial Buyout',
+        status: 'published'
+    };
+
+    try {
+        const res = await fetch('/api/jobs', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Brief published successfully!', 'success');
+            setTimeout(() => {
+                window.location.href = `/projects/${data.id}`;
+            }, 800);
+        } else {
+            showToast(data.detail || 'Please log in as a Company or Brand to publish briefs.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-cloud-check me-1"></i> Save & Publish Brief';
+        }
+    } catch (e) {
+        showToast('Error saving brief.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-cloud-check me-1"></i> Save & Publish Brief';
+    }
+}
+
+function copyBriefAsJson() {
+    const briefObj = {
+        title: document.getElementById('resTitle').value,
+        content_type: document.getElementById('resContentType').value,
+        description: document.getElementById('resDescription').value,
+        campaign_requirements: document.getElementById('resRequirements').value,
+        aspect_ratio: document.getElementById('resAspectRatio').value,
+        style: document.getElementById('resStyle').value,
+        format: document.getElementById('resFormat').value,
+        required_tools: document.getElementById('resTools').value,
+        required_skills: document.getElementById('resSkills').value,
+        specialization: document.getElementById('resSpec').value,
+        budget_range: document.getElementById('resBudget').value,
+        commercial_use: document.getElementById('resCommercial').value
+    };
+    navigator.clipboard.writeText(JSON.stringify(briefObj, null, 2));
+    showToast('Brief JSON copied to clipboard!', 'info');
+}
+</script>
+{% endblock %}

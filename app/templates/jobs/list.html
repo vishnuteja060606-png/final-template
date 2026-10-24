@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}Creative Briefs — Synapse Marketplace{% endblock %}
+
+{% block content %}
+<div class="bg-card border-bottom py-4 mb-4">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <h2 class="fw-bold mb-1">Explore Creative Briefs</h2>
+            <p class="text-secondary mb-0">Discover commercial campaigns and generative media projects posted by brands.</p>
+        </div>
+        <div>
+            <a href="/ai-builder" class="btn btn-warning text-dark fw-bold">
+                <i class="bi bi-magic me-1"></i> AI Brief Builder
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row g-4">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="filter-panel shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-funnel me-1"></i> Filters</h5>
+                    {% if active_filters %}
+                    <a href="/projects" class="btn btn-link btn-sm text-decoration-none p-0 text-primary">Clear all</a>
+                    {% endif %}
+                </div>
+
+                <form action="/projects" method="GET">
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title">Search Briefs</label>
+                        <div class="input-group">
+                            <input type="text" name="query" class="form-control form-control-sm" placeholder="e.g. sneaker, 3D scifi..." value="{{ active_filters.get('query', '') }}">
+                            <button class="btn btn-outline-secondary btn-sm" type="submit"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title">Content Type</label>
+                        <select name="content_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">All Types</option>
+                            <option value="Video" {% if active_filters.get('content_type') == 'Video' %}selected{% endif %}>Video</option>
+                            <option value="Animation" {% if active_filters.get('content_type') == 'Animation' %}selected{% endif %}>Animation</option>
+                            <option value="Image" {% if active_filters.get('content_type') == 'Image' %}selected{% endif %}>Image / Key Visual</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label filter-group-title">Specialization</label>
+                        <select name="specialization" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">All Specializations</option>
+                            <option value="AI Video" {% if active_filters.get('specialization') == 'AI Video' %}selected{% endif %}>AI Video</option>
+                            <option value="AI Animation" {% if active_filters.get('specialization') == 'AI Animation' %}selected{% endif %}>AI Animation</option>
+                            <option value="Generative Advertising" {% if active_filters.get('specialization') == 'Generative Advertising' %}selected{% endif %}>Generative Advertising</option>
+                            <option value="Social Media Creatives" {% if active_filters.get('specialization') == 'Social Media Creatives' %}selected{% endif %}>Social Media Creatives</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Apply Filters</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Briefs List -->
+        <div class="col-lg-9">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-secondary small">Showing <strong>{{ total }}</strong> active project{{ 's' if total != 1 else '' }}</span>
+            </div>
+
+            {% if items %}
+            <div class="row g-4">
+                {% for job in items %}
+                <div class="col-12">
+                    <div class="card p-4 border-0 shadow-sm rounded-4">
+                        <div class="d-flex flex-column flex-md-row justify-content-between align-items-start gap-2 mb-3">
+                            <div>
+                                <span class="badge bg-success-subtle text-success me-2">{{ job.content_type or 'Media' }}</span>
+                                {% if job.aspect_ratio %}
+                                <span class="badge bg-secondary-subtle text-secondary me-2">{{ job.aspect_ratio }}</span>
+                                {% endif %}
+                                {% if job.style %}
+                                <span class="badge bg-info-subtle text-info me-2">{{ job.style }}</span>
+                                {% endif %}
+                                <h4 class="fw-bold mt-2 mb-1">{{ job.title }}</h4>
+                                <div class="text-muted small">
+                                    <i class="bi bi-building me-1"></i>{{ job.company_name or 'Verified Brand' }} &bull; Posted {{ job.created_at.strftime('%b %d, %Y') }}
+                                </div>
+                            </div>
+                            {% if job.budget_range %}
+                            <div class="text-md-end">
+                                <span class="badge bg-primary fs-6 px-3 py-2">{{ job.budget_range }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-secondary small mb-3">{{ job.description }}</p>
+
+                        <!-- Required Tools & Skills -->
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            {% for t in job.tools_list() %}
+                            <span class="badge-tool">{{ t }}</span>
+                            {% endfor %}
+                            {% for s in job.skills_list() %}
+                            <span class="badge-skill">{{ s }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <div class="pt-3 border-top d-flex justify-content-between align-items-center">
+                            <span class="small text-muted"><i class="bi bi-shield-check text-success me-1"></i>{{ job.commercial_use or 'Commercial Rights Required' }}</span>
+                            <a href="/projects/{{ job.id }}" class="btn btn-outline-primary btn-sm px-4">View Brief Details</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card p-5 text-center border-0 shadow-sm rounded-4">
+                <i class="bi bi-briefcase fs-1 text-muted mb-2"></i>
+                <h5 class="fw-bold">No briefs found</h5>
+                <p class="text-secondary small">No creative briefs match your current search criteria.</p>
+                <div>
+                    <a href="/projects" class="btn btn-outline-primary btn-sm">Clear Filters</a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

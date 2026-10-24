@@ -1,0 +1,11 @@
+.env
+.env.*
+*.env
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.db
+uploads/creators/*/*_sample.png
+uploads/creators/*/*_test_clip.png

@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block title %}{{ company.company_name }} — Brand & Enterprise Profile{% endblock %}
+
+{% block content %}
+<div class="bg-white border-bottom py-5 shadow-sm">
+    <div class="container">
+        <div class="row justify-content-between align-items-center gy-3">
+            <div class="col-md-auto text-center text-md-start">
+                <div class="position-relative d-inline-block">
+                    <img src="{{ company.logo_url or 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=240' }}" 
+                         alt="{{ company.company_name }}" 
+                         class="rounded-4 border shadow-sm p-1 bg-white" 
+                         style="width: 110px; height: 110px; object-fit: contain;">
+                </div>
+            </div>
+            
+            <div class="col-md">
+                <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                    <h2 class="fw-bold mb-0 text-dark">{{ company.company_name }}</h2>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">{{ company.industry or 'AI Advertising & Media' }}</span>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        <i class="bi bi-patch-check-fill me-1"></i>Verified Brand
+                    </span>
+                </div>
+                
+                <p class="text-secondary mb-2 small">{{ company.description or 'Enterprise brand commissioning high-end generative media campaigns.' }}</p>
+                
+                <div class="text-secondary small d-flex flex-wrap gap-3">
+                    <span><i class="bi bi-geo-alt-fill text-danger me-1"></i>{{ company.location or 'Bengaluru, India / Remote' }}</span>
+                    {% if company.website %}
+                    <span><i class="bi bi-globe text-primary me-1"></i><a href="{{ company.website }}" target="_blank" class="text-decoration-none text-primary">{{ company.website }}</a></span>
+                    {% endif %}
+                    <span><i class="bi bi-briefcase-fill text-secondary me-1"></i>{{ company.jobs|length }} Posted Briefs</span>
+                    <span><i class="bi bi-star-fill text-warning me-1"></i>{{ company.reviews_given|length }} Reviews Given</span>
+                </div>
+
+                <!-- Social Links -->
+                {% set social = company.social_links_dict() %}
+                {% if social %}
+                <div class="d-flex flex-wrap align-items-center gap-3 mt-2 pt-2 border-top">
+                    <span class="small fw-semibold text-muted">Company Socials:</span>
+                    {% if social.get('website') %}
+                    <a href="{{ social.get('website') }}" target="_blank" class="text-secondary text-decoration-none small"><i class="bi bi-link-45deg me-1"></i>Website</a>
+                    {% endif %}
+                    {% if social.get('linkedin') %}
+                    <a href="{{ social.get('linkedin') }}" target="_blank" class="text-secondary text-decoration-none small"><i class="bi bi-linkedin me-1 text-primary"></i>LinkedIn</a>
+                    {% endif %}
+                    {% if social.get('twitter') %}
+                    <a href="{{ social.get('twitter') }}" target="_blank" class="text-secondary text-decoration-none small"><i class="bi bi-twitter-x me-1"></i>Twitter</a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-auto text-md-end d-flex flex-column gap-2">
+                <a href="/projects" class="btn btn-primary btn-sm px-3 shadow-sm">
+                    <i class="bi bi-search me-1"></i>Explore All Briefs
+                </a>
+                <a href="/creators" class="btn btn-outline-secondary btn-sm px-3">
+                    <i class="bi bi-people me-1"></i>Browse Creators
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Sidebar: About & Recent Checks -->
+        <div class="col-lg-4">
+            <div class="card p-4 border-0 shadow-sm rounded-4 mb-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-building-check text-primary me-2"></i>Brand Mission</h5>
+                <p class="text-secondary small mb-3" style="line-height: 1.6;">
+                    {{ company.description or 'We partner with forward-thinking AI artists to deliver next-generation brand experiences.' }}
+                </p>
+                
+                {% if company.tags %}
+                <div class="mb-3">
+                    <label class="small text-muted fw-bold text-uppercase d-block mb-1">Brand Focus Areas</label>
+                    <div class="d-flex flex-wrap gap-1">
+                        {% for tag in company.tags.split(',') %}
+                        <span class="badge bg-light text-dark border p-1">{{ tag.strip() }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="p-3 bg-success-subtle rounded-3 small border border-success-subtle mt-3">
+                    <span class="text-success fw-bold"><i class="bi bi-check-circle-fill me-1"></i>Creator Profile Check Active</span>
+                    <p class="text-secondary small mb-0 mt-1">Viewing this profile has been logged in the marketplace database.</p>
+                </div>
+            </div>
+
+            <!-- Recent Creator Engagement Activity -->
+            {% if recent_checks %}
+            <div class="card p-4 border-0 shadow-sm rounded-4 mb-4">
+                <h6 class="fw-bold mb-3"><i class="bi bi-people-fill text-primary me-1"></i> Recent Creator Interactions</h6>
+                <ul class="list-unstyled mb-0 d-flex flex-column gap-2 small">
+                    {% for chk in recent_checks %}
+                    <li class="d-flex justify-content-between align-items-center py-1 border-bottom">
+                        <span>
+                            <i class="bi bi-person-check text-success me-1"></i>
+                            {% if chk.creator %}
+                            <a href="/creators/{{ chk.creator_id }}" class="text-decoration-none fw-semibold text-dark">{{ chk.creator.display_name }}</a>
+                            {% else %}
+                            <span class="text-muted">Creator Member</span>
+                            {% endif %}
+                        </span>
+                        <span class="text-muted" style="font-size: 0.75rem;">{{ chk.checked_at.strftime('%b %d') }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Main Content: Open Briefs & Reviews Given -->
+        <div class="col-lg-8">
+            <!-- Open Briefs -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-briefcase-fill text-primary me-2"></i>Creative Briefs by {{ company.company_name }}
+                </h4>
+                <span class="badge bg-primary-subtle text-primary">{{ company.jobs|length }} Open</span>
+            </div>
+
+            {% if company.jobs %}
+            <div class="row g-3 mb-5">
+                {% for job in company.jobs %}
+                <div class="col-12">
+                    <div class="card p-4 border-0 shadow-sm rounded-4">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary me-1">{{ job.content_type }}</span>
+                                <span class="badge bg-secondary-subtle text-secondary">{{ job.aspect_ratio or '16:9' }}</span>
+                                <h5 class="fw-bold mt-2 mb-1 text-dark">{{ job.title }}</h5>
+                            </div>
+                            <span class="badge bg-success-subtle text-success fs-6 border border-success-subtle">
+                                <span data-inr="{{ job.budget_inr }}">₹{{ job.budget_inr }}</span>
+                            </span>
+                        </div>
+                        <p class="text-secondary small mb-3">{{ job.description[:180] }}...</p>
+                        <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                            <span class="small text-muted">{{ job.created_at.strftime('%b %d, %Y') }}</span>
+                            <a href="/projects/{{ job.id }}" class="btn btn-sm btn-outline-primary">View Brief & Apply</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="card p-4 text-center border-0 shadow-sm rounded-4 mb-5">
+                <p class="text-muted small mb-0">No active briefs published at the moment.</p>
+            </div>
+            {% endif %}
+
+            <!-- Reviews Given by This Company to Creators (Reviewer Feature) -->
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-chat-quote-fill text-warning me-2"></i>Reviews Given to AI Creators
+                    </h5>
+                    <p class="text-muted small mb-0">Transparent evaluations this brand left for past creator collaborations</p>
+                </div>
+                <div class="card-body p-4">
+                    {% if not company.reviews_given %}
+                    <div class="text-center py-3 text-muted">
+                        <p class="small mb-0">This company has not submitted public creator reviews yet.</p>
+                    </div>
+                    {% else %}
+                    <div class="d-flex flex-column gap-3">
+                        {% for r in company.reviews_given %}
+                        <div class="p-3 border rounded-3 bg-light">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <div>
+                                    <span class="small text-muted">Reviewed Creator:</span>
+                                    <a href="/creators/{{ r.creator_id }}" class="fw-bold text-primary text-decoration-none ms-1">
+                                        {{ r.creator.display_name if r.creator else 'Creator' }}
+                                    </a>
+                                    <div class="text-dark small fw-semibold">Campaign: {{ r.project_title }}</div>
+                                </div>
+                                <div class="text-warning">
+                                    {% for star in range(r.rating) %}★{% endfor %}
+                                    {% for star in range(5 - r.rating) %}☆{% endfor %}
+                                </div>
+                            </div>
+                            <p class="text-secondary small mb-1">{{ r.comment }}</p>
+                            {% if r.tools_used %}
+                            <span class="badge bg-white text-secondary border small">Tools: {{ r.tools_used }}</span>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

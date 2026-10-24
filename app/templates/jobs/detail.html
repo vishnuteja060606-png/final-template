@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}{{ job.title }} — Creative Brief{% endblock %}
+
+{% block content %}
+<div class="bg-white border-bottom py-5">
+    <div class="container">
+        <div class="row justify-content-between align-items-start gy-3">
+            <div class="col-lg-8">
+                <div class="d-flex flex-wrap gap-2 mb-2">
+                    <span class="badge bg-success-subtle text-success">{{ job.content_type }}</span>
+                    {% if job.aspect_ratio %}
+                    <span class="badge bg-secondary-subtle text-secondary">{{ job.aspect_ratio }}</span>
+                    {% endif %}
+                    {% if job.style %}
+                    <span class="badge bg-info-subtle text-info">{{ job.style }}</span>
+                    {% endif %}
+                </div>
+                <h2 class="fw-bold mb-2">{{ job.title }}</h2>
+                <div class="text-secondary small">
+                    Posted by <strong class="text-dark">{{ job.company.company_name if job.company else 'Verified Company' }}</strong> &bull; {{ job.created_at.strftime('%B %d, %Y') }}
+                </div>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                {% if job.budget_range %}
+                <div class="fs-4 fw-bold text-primary mb-2">{{ job.budget_range }}</div>
+                {% endif %}
+                <button onclick="loadRankedCreators({{ job.id }})" class="btn btn-primary px-4 shadow">
+                    <i class="bi bi-cpu me-1"></i> Match Creators for this Brief
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row g-4">
+        <!-- Main Brief Details -->
+        <div class="col-lg-8">
+            <div class="card p-4 p-md-5 border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <h4 class="fw-bold mb-3">Project Overview</h4>
+                <p class="text-secondary mb-4" style="line-height: 1.7; white-space: pre-line;">
+                    {{ job.description }}
+                </p>
+
+                {% if job.campaign_requirements %}
+                <h5 class="fw-bold mb-3">Campaign Deliverables & Requirements</h5>
+                <div class="p-3 bg-light rounded-3 text-secondary small border mb-4" style="line-height: 1.6; white-space: pre-line;">
+                    {{ job.campaign_requirements }}
+                </div>
+                {% endif %}
+
+                <h5 class="fw-bold mb-3">Required AI Tools & Capabilities</h5>
+                <div class="mb-4">
+                    <div class="small text-muted mb-2">Recommended Tools / Models:</div>
+                    <div class="d-flex flex-wrap gap-2 mb-3">
+                        {% for t in job.tools_list() %}
+                        <span class="badge-tool px-3 py-2 fs-6">{{ t }}</span>
+                        {% else %}
+                        <span class="text-muted small">Open to creator's preferred pipeline</span>
+                        {% endfor %}
+                    </div>
+
+                    <div class="small text-muted mb-2">Required Skills:</div>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for s in job.skills_list() %}
+                        <span class="badge-skill px-3 py-2 fs-6">{{ s }}</span>
+                        {% else %}
+                        <span class="text-muted small">None specified</span>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- AI-Native Creator Ranking & RAG Explainability Card -->
+            <div class="card p-4 p-md-5 border-0 shadow-sm rounded-4 mb-4 bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle mb-1">
+                            <i class="bi bi-cpu me-1"></i> Deterministic 5-Signal Engine
+                        </span>
+                        <h4 class="fw-bold mb-0">AI Match Ranking for this Brief</h4>
+                    </div>
+                    <button class="btn btn-primary px-3 shadow-sm" id="btnRankCreators" onclick="loadRankedCreators({{ job.id }})">
+                        <i class="bi bi-lightning-charge me-1"></i> Rank Compatible Creators
+                    </button>
+                </div>
+                <p class="text-secondary small mb-4">
+                    Evaluates all creators through Stage 1 Hard-Eligibility Gates (Commercial Buyout & Aspect Ratio) followed by Stage 2 Weighted Scoring (Semantic Relevancy 30%, Tool Overlap 25%, Style Compatibility 20%, Trust Signals 15%, Portfolio Evidence 10%).
+                </p>
+
+                <div id="rankingLoading" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="text-muted small mt-2">Running vector cosine similarity, toolchain overlap, and hard-gate filters...</div>
+                </div>
+
+                <div id="rankingContainer" class="d-flex flex-column gap-3">
+                    <div class="text-center text-muted py-4 border rounded-3 bg-light">
+                        <i class="bi bi-person-check fs-2 text-muted"></i>
+                        <p class="mb-0 small mt-1">Click "Rank Compatible Creators" to run the algorithmic matcher.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Specifications -->
+        <div class="col-lg-4">
+            <div class="card p-4 border-0 shadow-sm rounded-4 bg-white mb-4">
+                <h5 class="fw-bold mb-3">Creative Specifications</h5>
+                
+                <ul class="list-unstyled d-flex flex-column gap-3 mb-0 small">
+                    <li class="d-flex justify-content-between pb-2 border-bottom">
+                        <span class="text-muted">Content Type</span>
+                        <strong class="text-dark">{{ job.content_type or 'Media' }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between pb-2 border-bottom">
+                        <span class="text-muted">Aspect Ratio</span>
+                        <strong class="text-dark">{{ job.aspect_ratio or '16:9' }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between pb-2 border-bottom">
+                        <span class="text-muted">Format</span>
+                        <strong class="text-dark">{{ job.format or 'MP4' }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between pb-2 border-bottom">
+                        <span class="text-muted">Visual Style</span>
+                        <strong class="text-dark">{{ job.style or 'Cinematic' }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between pb-2 border-bottom">
+                        <span class="text-muted">Target Specialization</span>
+                        <strong class="text-dark">{{ job.specialization or 'General AI Creative' }}</strong>
+                    </li>
+                    <li class="d-flex justify-content-between">
+                        <span class="text-muted">Commercial Terms</span>
+                        <strong class="text-success text-end">{{ job.commercial_use or 'Commercial Buyout' }}</strong>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Company Card -->
+            {% if job.company %}
+            <div class="card p-4 border-0 shadow-sm rounded-4 bg-white">
+                <h6 class="filter-group-title mb-2">Posted By</h6>
+                <h5 class="fw-bold mb-1">{{ job.company.company_name }}</h5>
+                <p class="text-secondary small mb-3">{{ job.company.industry or 'Brand & Advertising' }} &bull; {{ job.company.location or 'Global' }}</p>
+                <p class="text-secondary small mb-3">{{ job.company.description or '' }}</p>
+                {% if job.company.website %}
+                <a href="{{ job.company.website }}" target="_blank" class="btn btn-outline-secondary btn-sm w-100">
+                    <i class="bi bi-box-arrow-up-right me-1"></i> Visit Company Website
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Explainability Modal -->
+<div class="modal fade" id="explainModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 shadow rounded-4">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold">
+                    <i class="bi bi-patch-check text-success me-2"></i> RAG Match Grounding & Explainability
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="explainModalLoading" class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <div class="text-muted small mt-2">Retrieving portfolio evidence & generating grounded narrative...</div>
+                </div>
+                <div id="explainModalContent" class="d-none">
+                    <div class="alert alert-light border p-3 rounded-3 mb-4" id="explainNarrative" style="line-height: 1.7; font-size: 0.95rem;"></div>
+                    
+                    <h6 class="fw-bold mb-2">5-Factor Scoring Breakdown:</h6>
+                    <div class="row g-2 mb-4" id="explainBreakdownGrid"></div>
+
+                    <h6 class="fw-bold mb-2">Grounded Portfolio Evidence:</h6>
+                    <div class="list-group rounded-3" id="explainEvidenceList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+async function loadRankedCreators(jobId) {
+    const btn = document.getElementById('btnRankCreators');
+    const loader = document.getElementById('rankingLoading');
+    const container = document.getElementById('rankingContainer');
+
+    btn.disabled = true;
+    loader.classList.remove('d-none');
+    container.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/v2/rankings/creators-for-brief', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: jobId, limit: 10 })
+        });
+        const data = await res.json();
+        loader.classList.add('d-none');
+
+        if (!data.ranked_creators || data.ranked_creators.length === 0) {
+            container.innerHTML = '<div class="alert alert-warning">No eligible creators met the mandatory licensing or format requirements for this campaign.</div>';
+            return;
+        }
+
+        container.innerHTML = data.ranked_creators.map((c, idx) => {
+            const b = c.breakdown;
+            const scoreColor = b.total_score >= 80 ? 'text-success' : (b.total_score >= 60 ? 'text-primary' : 'text-warning');
+            const matchedToolsHtml = b.matched_tools.map(t => `<span class="badge bg-success-subtle text-success me-1">${t}</span>`).join('');
+            const missingToolsHtml = b.missing_tools.map(t => `<span class="badge bg-secondary-subtle text-secondary me-1"><del>${t}</del></span>`).join('');
+            const badgesHtml = b.verified_badges.map(bg => `<span class="badge bg-primary-subtle text-primary me-1"><i class="bi bi-shield-check me-1"></i>${bg}</span>`).join('');
+
+            return `
+            <div class="border rounded-4 p-3 bg-white shadow-sm hover-shadow transition">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-dark text-white rounded-pill">#${idx + 1}</span>
+                            <h5 class="fw-bold mb-0">
+                                <a href="/creators/${c.creator_id}" class="text-decoration-none text-dark">${c.display_name}</a>
+                            </h5>
+                            ${c.is_verified ? '<i class="bi bi-patch-check-fill text-primary" title="Platform Verified"></i>' : ''}
+                        </div>
+                        <div class="text-secondary small mt-1">${c.specialization || 'AI Creative Professional'}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fs-4 fw-bold ${scoreColor}">${b.total_score}<small class="fs-6 text-muted">/100</small></div>
+                        <span class="badge bg-success-subtle text-success"><i class="bi bi-check-circle me-1"></i>Hard Gate: PASS</span>
+                    </div>
+                </div>
+
+                <div class="d-flex flex-wrap gap-1 mb-2">
+                    ${badgesHtml}
+                </div>
+
+                <div class="p-2 bg-light rounded-3 small mb-3">
+                    <div class="row g-2 text-center">
+                        <div class="col-4 col-md-2">
+                            <div class="text-muted small">Semantic</div>
+                            <strong>${b.semantic_score}%</strong>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="text-muted small">Tools</div>
+                            <strong>${b.tool_overlap_score}%</strong>
+                        </div>
+                        <div class="col-4 col-md-2">
+                            <div class="text-muted small">Style</div>
+                            <strong>${b.style_content_score}%</strong>
+                        </div>
+                        <div class="col-4 col-md-3">
+                            <div class="text-muted small">Trust</div>
+                            <strong>${b.trust_signal_score}%</strong>
+                        </div>
+                        <div class="col-4 col-md-3">
+                            <div class="text-muted small">Evidence</div>
+                            <strong>${b.portfolio_evidence_score}%</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 small">
+                    <strong class="text-dark">Toolchain Overlap:</strong> ${matchedToolsHtml || '<span class="text-muted">None</span>'} ${missingToolsHtml}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <button class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="showMatchExplanation(${c.creator_id}, ${jobId})">
+                        <i class="bi bi-search me-1"></i> View Grounded Evidence & Citations
+                    </button>
+                    <a href="/creators/${c.creator_id}" class="btn btn-sm btn-light border text-dark">
+                        View Full Profile <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+            `;
+        }).join('');
+    } catch (e) {
+        loader.classList.add('d-none');
+        container.innerHTML = '<div class="alert alert-danger">Error computing candidate ranking.</div>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+async function showMatchExplanation(creatorId, jobId) {
+    const modal = new bootstrap.Modal(document.getElementById('explainModal'));
+    const loader = document.getElementById('explainModalLoading');
+    const content = document.getElementById('explainModalContent');
+
+    loader.classList.remove('d-none');
+    content.classList.add('d-none');
+    modal.show();
+
+    try {
+        const res = await fetch(`/api/v2/creators/${creatorId}/explain-match/${jobId}`);
+        const data = await res.json();
+
+        loader.classList.add('d-none');
+        content.classList.remove('d-none');
+
+        document.getElementById('explainNarrative').innerHTML = data.explanation_narrative.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+        const b = data.breakdown;
+        document.getElementById('explainBreakdownGrid').innerHTML = `
+            <div class="col-6 col-md-4"><div class="p-2 border rounded text-center bg-light"><strong>Semantic Sim (30%)</strong><br/>${b.semantic_score}%</div></div>
+            <div class="col-6 col-md-4"><div class="p-2 border rounded text-center bg-light"><strong>Tool Match (25%)</strong><br/>${b.tool_overlap_score}%</div></div>
+            <div class="col-6 col-md-4"><div class="p-2 border rounded text-center bg-light"><strong>Style Fit (20%)</strong><br/>${b.style_content_score}%</div></div>
+            <div class="col-6 col-md-6"><div class="p-2 border rounded text-center bg-light"><strong>Trust Signals (15%)</strong><br/>${b.trust_signal_score}%</div></div>
+            <div class="col-6 col-md-6"><div class="p-2 border rounded text-center bg-light"><strong>Portfolio Match (10%)</strong><br/>${b.portfolio_evidence_score}%</div></div>
+        `;
+
+        document.getElementById('explainEvidenceList').innerHTML = data.grounded_portfolio_evidence.map(p => `
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <strong class="text-dark">${p.title}</strong>
+                    <div class="text-muted small">${p.content_type} &bull; ${p.aspect_ratio} &bull; Tools: ${p.tools_used}</div>
+                </div>
+                <span class="badge bg-secondary-subtle text-secondary">Evidence ID: #${p.portfolio_id}</span>
+            </div>
+        `).join('');
+
+    } catch (e) {
+        loader.classList.add('d-none');
+        content.classList.remove('d-none');
+        document.getElementById('explainNarrative').innerText = "Failed to load explanation.";
+    }
+}
+</script>
+{% endblock %}

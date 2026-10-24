@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Discover AI Creators — Synapse Marketplace{% endblock %}
+
+{% block content %}
+<div class="bg-card border-bottom py-4 mb-4">
+    <div class="container">
+        <h2 class="fw-bold mb-1">Discover AI Content Creators</h2>
+        <p class="text-secondary mb-0">Search and filter top generative filmmakers, animators, and prompt engineers.</p>
+    </div>
+</div>
+
+<div class="container pb-5">
+    <div class="row g-4">
+        <!-- Sidebar Filters -->
+        <div class="col-lg-3">
+            <div class="filter-panel shadow-sm">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0"><i class="bi bi-funnel me-1"></i> Filters</h5>
+                    {% if active_filters %}
+                    <a href="/creators" class="btn btn-link btn-sm text-decoration-none p-0 text-primary">Clear all</a>
+                    {% endif %}
+                </div>
+
+                <form action="/creators" method="GET" id="creatorFilterForm">
+                                        <!-- Search Engine Mode -->
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title text-primary"><i class="bi bi-cpu me-1"></i> Search Algorithm</label>
+                        <select name="search_mode" class="form-select form-select-sm border-primary" onchange="this.form.submit()">
+                            <option value="standard" {% if search_mode == 'standard' or not search_mode %}selected{% endif %}>Standard Keyword Search</option>
+                            <option value="semantic" {% if search_mode == 'semantic' %}selected{% endif %}>Dense Semantic Search (Vector)</option>
+                            <option value="hybrid" {% if search_mode == 'hybrid' %}selected{% endif %}>Hybrid Search (Reciprocal Rank Fusion)</option>
+                        </select>
+                    </div>
+
+                    <!-- Text Search -->
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title">Keyword Search</label>
+                        <div class="input-group">
+                            <input type="text" name="query" class="form-control form-control-sm" placeholder="e.g. cinematic, Runway..." value="{{ active_filters.get('query', '') }}">
+                            <button class="btn btn-outline-secondary btn-sm" type="submit"><i class="bi bi-search"></i></button>
+                        </div>
+                    </div>
+
+                    <!-- Specialization -->
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title">Specialization</label>
+                        <select name="specialization" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">All Specializations</option>
+                            <option value="AI Video" {% if active_filters.get('specialization') == 'AI Video' %}selected{% endif %}>AI Video</option>
+                            <option value="AI Animation" {% if active_filters.get('specialization') == 'AI Animation' %}selected{% endif %}>AI Animation</option>
+                            <option value="Generative Advertising" {% if active_filters.get('specialization') == 'Generative Advertising' %}selected{% endif %}>Generative Advertising</option>
+                            <option value="Social Media Creatives" {% if active_filters.get('specialization') == 'Social Media Creatives' %}selected{% endif %}>Social Media Creatives</option>
+                        </select>
+                    </div>
+
+                    <!-- AI Tool / Model -->
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title">AI Tool / Model</label>
+                        <select name="tool" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">All Tools & Models</option>
+                            <option value="Runway" {% if active_filters.get('tool') == 'Runway' %}selected{% endif %}>Runway (Gen-3)</option>
+                            <option value="Midjourney" {% if active_filters.get('tool') == 'Midjourney' %}selected{% endif %}>Midjourney (v6)</option>
+                            <option value="Kling" {% if active_filters.get('tool') == 'Kling' %}selected{% endif %}>Kling AI</option>
+                            <option value="Stable Diffusion" {% if active_filters.get('tool') == 'Stable Diffusion' %}selected{% endif %}>Stable Diffusion / SDXL</option>
+                            <option value="ComfyUI" {% if active_filters.get('tool') == 'ComfyUI' %}selected{% endif %}>ComfyUI</option>
+                            <option value="Flux" {% if active_filters.get('tool') == 'Flux' %}selected{% endif %}>Flux.1</option>
+                            <option value="Pika" {% if active_filters.get('tool') == 'Pika' %}selected{% endif %}>Pika Labs</option>
+                        </select>
+                    </div>
+
+                    <!-- Content Type -->
+                    <div class="mb-3">
+                        <label class="form-label filter-group-title">Content Type</label>
+                        <select name="content_type" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">All Types</option>
+                            <option value="Video" {% if active_filters.get('content_type') == 'Video' %}selected{% endif %}>Video</option>
+                            <option value="Animation" {% if active_filters.get('content_type') == 'Animation' %}selected{% endif %}>Animation</option>
+                            <option value="Image" {% if active_filters.get('content_type') == 'Image' %}selected{% endif %}>Image / Key Visual</option>
+                        </select>
+                    </div>
+
+                    <!-- Aspect Ratio -->
+                    <div class="mb-4">
+                        <label class="form-label filter-group-title">Aspect Ratio</label>
+                        <select name="aspect_ratio" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <option value="">All Aspect Ratios</option>
+                            <option value="16:9" {% if active_filters.get('aspect_ratio') == '16:9' %}selected{% endif %}>16:9 (Landscape / Cinema)</option>
+                            <option value="9:16" {% if active_filters.get('aspect_ratio') == '9:16' %}selected{% endif %}>9:16 (Vertical / Reels)</option>
+                            <option value="1:1" {% if active_filters.get('aspect_ratio') == '1:1' %}selected{% endif %}>1:1 (Square)</option>
+                            <option value="4:5" {% if active_filters.get('aspect_ratio') == '4:5' %}selected{% endif %}>4:5 (Portrait)</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-sm w-100">Apply Filters</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Main Search Results Column -->
+        <div class="col-lg-9">
+            <!-- Active Filters Bar -->
+            {% if active_filters %}
+            <div class="card p-3 mb-4 bg-card border-0 shadow-sm rounded-3">
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="small fw-bold text-secondary">Active filters:</span>
+                    {% for k, v in active_filters.items() %}
+                    <span class="badge bg-dark text-light border p-2 d-inline-flex align-items-center gap-2">
+                        <span class="text-muted text-capitalize">{{ k }}:</span> <strong>{{ v }}</strong>
+                    </span>
+                    {% endfor %}
+                    <a href="/creators" class="btn btn-link btn-sm text-danger text-decoration-none ms-auto">Reset</a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Result Count Header -->
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-secondary small">Found <strong>{{ total }}</strong> matching creator{{ 's' if total != 1 else '' }}</span>
+            </div>
+
+            <!-- Creator Cards Grid -->
+            {% if items %}
+            <div class="row g-4">
+                {% for creator in items %}
+                <div class="col-md-6">
+                    <div class="card h-100 card-creator p-4 d-flex flex-column">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <div class="position-relative">
+                                <img src="{{ creator.profile_image_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160' }}" alt="{{ creator.display_name }}" class="creator-avatar" style="width: 64px; height: 64px;">
+                                {% if creator.is_verified %}
+                                <span class="position-absolute bottom-0 start-50 translate-middle-x badge-verified" style="font-size: 0.65rem; padding: 2px 6px;">
+                                    <i class="bi bi-patch-check-fill"></i> Verified
+                                </span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-grow-1">
+                                <h5 class="fw-bold mb-0 text-truncate" style="max-width: 220px;">{{ creator.display_name }}</h5>
+                                <div class="text-primary small fw-semibold mb-1">{{ creator.specialization or 'AI Creator' }}</div>
+                                <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ creator.location or 'Remote' }}</div>
+                            </div>
+                        </div>
+
+                                                {% if creator.semantic_score is defined %}
+                        <div class="mb-2">
+                            <span class="badge" style="background-color: #f3e8ff; color: #7e22ce; border: 1px solid #d8b4fe;">
+                                <i class="bi bi-stars me-1"></i> Semantic Match: {{ creator.semantic_score }}%
+                            </span>
+                        </div>
+                        {% elif creator.rrf_score is defined %}
+                        <div class="mb-2">
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="bi bi-cpu me-1"></i> Hybrid RRF Score: {{ creator.rrf_score }}
+                            </span>
+                        </div>
+                        {% endif %}
+
+                        <p class="text-secondary small mb-3 flex-grow-1">{{ creator.headline or 'AI creator pushing boundaries of synthetic media.' }}</p>
+
+                        <!-- Verified Signals -->
+                        {% if creator.verification_signals %}
+                        <div class="mb-3">
+                            {% for sig in creator.verification_signals[:2] %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle me-1 mb-1 small">
+                                <i class="bi bi-shield-check me-1"></i>{{ sig.badge_name }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Tools & Models Chips -->
+                        <div class="mb-3">
+                            <div class="small text-muted mb-1">Tools & Models:</div>
+                            <div class="d-flex flex-wrap gap-1">
+                                {% if creator.tools_models %}
+                                    {% for tool in creator.tools_models.split(',')[:4] %}
+                                    <span class="badge-tool">{{ tool.strip() }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-muted small">None listed</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Card Footer -->
+                        <div class="pt-3 border-top mt-auto d-flex justify-content-between align-items-center">
+                            <span class="small text-muted"><i class="bi bi-images me-1"></i>{{ creator.portfolio_count }} Works</span>
+                            <a href="/creators/{{ creator.id }}" class="btn btn-primary btn-sm px-3">View Portfolio</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty Results State -->
+            <div class="card p-5 text-center border-0 shadow-sm rounded-4 bg-card">
+                <div class="badge bg-dark text-muted p-3 rounded-circle fs-2 mx-auto mb-3" style="width: 70px; height: 70px;">
+                    <i class="bi bi-search"></i>
+                </div>
+                <h4 class="fw-bold mb-2">No creators found</h4>
+                <p class="text-secondary small mb-4" style="max-width: 450px; margin: 0 auto;">
+                    {{ message or 'We could not find any AI creators matching your current combination of filters. Try broadening your criteria.' }}
+                </p>
+                <div>
+                    <a href="/creators" class="btn btn-outline-primary btn-sm px-4">
+                        <i class="bi bi-arrow-counterclockwise me-1"></i> Clear All Filters
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

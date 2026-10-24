@@ -2,49 +2,255 @@
 
 {% block title %}Two-Step Verification — Synapse{% endblock %}
 
+{% block extra_head %}
+<style>
+/* ── Full-page gradient background ── */
+body {
+    background: linear-gradient(135deg, #0f172a 0%, #1a1040 50%, #0f172a 100%) !important;
+    min-height: 100vh;
+}
+
+/* ── Centered card ── */
+.otp-card {
+    background: rgba(30, 41, 59, 0.92);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: 20px;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 25px 60px rgba(0,0,0,0.5), 0 0 80px rgba(79,70,229,0.08);
+    max-width: 460px;
+    width: 100%;
+    padding: 44px 40px;
+}
+
+/* ── Shield icon pulse ── */
+.shield-icon {
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
+    color: #fff;
+    margin: 0 auto 20px;
+    animation: pulse-shield 2.5s ease-in-out infinite;
+    box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5);
+}
+@keyframes pulse-shield {
+    0%   { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.5); }
+    70%  { box-shadow: 0 0 0 16px rgba(79, 70, 229, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+
+/* ── Step indicator ── */
+.step-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    margin-bottom: 28px;
+}
+.step-dot {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.step-dot.done  { background: #4f46e5; color: #fff; }
+.step-dot.active{ background: #818cf8; color: #fff; box-shadow: 0 0 0 4px rgba(129,140,248,0.25); }
+.step-dot.idle  { background: rgba(100,116,139,0.3); color: #64748b; }
+.step-line {
+    width: 48px;
+    height: 2px;
+    background: rgba(100,116,139,0.3);
+}
+.step-line.done { background: #4f46e5; }
+
+/* ── OTP digit inputs ── */
+.otp-box {
+    width: 52px;
+    height: 60px;
+    font-size: 1.6rem;
+    font-weight: 800;
+    text-align: center;
+    border-radius: 12px;
+    border: 2px solid rgba(99, 102, 241, 0.3);
+    background: rgba(15, 23, 42, 0.7);
+    color: #e2e8f0;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, transform 0.1s;
+    caret-color: #818cf8;
+}
+.otp-box:focus {
+    border-color: #818cf8;
+    box-shadow: 0 0 0 3px rgba(129,140,248,0.25);
+    transform: scale(1.05);
+}
+.otp-box.filled {
+    border-color: #4f46e5;
+    background: rgba(79, 70, 229, 0.15);
+}
+
+/* ── Email input ── */
+.synapse-input {
+    background: rgba(15, 23, 42, 0.7) !important;
+    border: 2px solid rgba(99, 102, 241, 0.25) !important;
+    border-radius: 10px !important;
+    color: #e2e8f0 !important;
+    font-size: 0.95rem;
+    padding: 10px 14px !important;
+    transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.synapse-input:focus {
+    border-color: #818cf8 !important;
+    box-shadow: 0 0 0 3px rgba(129,140,248,0.18) !important;
+    outline: none;
+}
+.synapse-input::placeholder { color: #475569 !important; }
+
+/* ── Buttons ── */
+.btn-synapse-primary {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    border: none;
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 700;
+    padding: 12px;
+    font-size: 1rem;
+    transition: opacity 0.2s, transform 0.1s;
+    box-shadow: 0 4px 16px rgba(79,70,229,0.35);
+}
+.btn-synapse-primary:hover:not(:disabled) {
+    opacity: 0.92;
+    transform: translateY(-1px);
+    color: #fff;
+}
+.btn-synapse-primary:disabled { opacity: 0.55; }
+
+/* ── Timer ── */
+.otp-timer {
+    font-size: 0.82rem;
+    color: #64748b;
+}
+.otp-timer .timer-val {
+    color: #f59e0b;
+    font-weight: 700;
+}
+.otp-timer .timer-val.expired { color: #ef4444; }
+
+/* ── Labels ── */
+.field-label {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+}
+.otp-card h2 { color: #f1f5f9; }
+.otp-card p { color: #94a3b8; }
+
+/* ── Send Code button (step 1) ── */
+.btn-send-code {
+    background: rgba(79,70,229,0.15);
+    border: 1.5px solid rgba(99,102,241,0.4);
+    color: #818cf8;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    padding: 10px 16px;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+.btn-send-code:hover:not(:disabled) {
+    background: rgba(79,70,229,0.3);
+    color: #a5b4fc;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-5 my-md-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6 col-lg-5">
-            <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5">
-                <div class="text-center mb-4">
-                    <div class="badge bg-primary-subtle text-primary p-3 rounded-circle fs-3 mb-3">
-                        <i class="bi bi-shield-lock-fill"></i>
-                    </div>
-                    <h3 class="fw-bold text-dark mb-1">Two-Step Verification</h3>
-                    <p class="text-secondary small mb-0">
-                        Enter the 6-digit security code sent to your registered email address.
-                    </p>
-                </div>
+<div class="d-flex align-items-center justify-content-center" style="min-height: calc(100vh - 64px); padding: 32px 16px;">
+    <div class="otp-card">
 
-                <div class="mb-3">
-                    <label class="form-label small fw-semibold text-muted">Account Email</label>
-                    <input type="email" id="otpEmail" class="form-control form-control-lg bg-light" placeholder="name@example.com" value="{{ email or '' }}">
-                </div>
+        <!-- Shield Icon -->
+        <div class="shield-icon">
+            <i class="bi bi-shield-lock-fill"></i>
+        </div>
 
-                <div class="mb-4">
-                    <label class="form-label small fw-semibold text-muted d-block text-center mb-2">6-Digit Verification Code</label>
-                    <div class="d-flex justify-content-center gap-2" id="otpInputs">
-                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;" autofocus>
-                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
-                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
-                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
-                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
-                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
-                    </div>
-                </div>
+        <div class="text-center mb-4">
+            <h2 class="fw-bold mb-1" style="font-size:1.5rem; letter-spacing:-0.5px;">Two-Step Verification</h2>
+            <p class="mb-0" style="font-size:0.88rem;">
+                Secure your Synapse account with email verification.
+            </p>
+        </div>
 
-                <button class="btn btn-primary btn-lg w-100 fw-semibold mb-3 shadow" id="btnVerifyOtp" onclick="submit2FAVerification()">
-                    <i class="bi bi-check2-circle me-1"></i> Verify & Authenticate
-                </button>
-
-                <div class="d-flex justify-content-between align-items-center small text-muted">
-                    <button class="btn btn-link btn-sm text-decoration-none p-0" id="btnResendOtp" onclick="resend2FACode()">
-                        <i class="bi bi-arrow-repeat me-1"></i> Resend Code
-                    </button>
-                    <a href="/login" class="text-secondary text-decoration-none">Back to Password Login</a>
-                </div>
+        <!-- Step Indicator -->
+        <div class="step-indicator mb-4">
+            <div class="step-dot done" id="stepDot1" title="Enter Email">1</div>
+            <div class="step-line" id="stepLine12"></div>
+            <div class="step-dot active" id="stepDot2" title="Enter Code">2</div>
+            <div class="step-line" id="stepLine23"></div>
+            <div class="step-dot idle" id="stepDot3" title="Verified">
+                <i class="bi bi-check-lg" style="font-size:0.7rem;"></i>
             </div>
+        </div>
+
+        <!-- Step 1: Email + Send Code -->
+        <div class="mb-3">
+            <div class="field-label">Account Email</div>
+            <div class="d-flex gap-2">
+                <input
+                    type="email"
+                    id="otpEmail"
+                    class="synapse-input form-control flex-grow-1"
+                    placeholder="you@example.com"
+                    value="{{ email or '' }}"
+                    autocomplete="email"
+                >
+                <button class="btn-send-code" id="btnSendCode" onclick="sendOtpCode()">
+                    <i class="bi bi-send me-1"></i> Send Code
+                </button>
+            </div>
+            <div id="sendStatus" class="mt-2" style="min-height:20px; font-size:0.8rem;"></div>
+        </div>
+
+        <!-- Step 2: OTP Digits -->
+        <div class="mb-4">
+            <div class="field-label text-center mb-3">6-Digit Verification Code</div>
+            <div class="d-flex justify-content-center gap-2" id="otpInputs">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box" autocomplete="one-time-code">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
+                <input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="otp-box">
+            </div>
+
+            <!-- Timer & Resend -->
+            <div class="d-flex justify-content-between align-items-center mt-3 otp-timer">
+                <span id="timerDisplay">Code valid for <span class="timer-val" id="timerVal">10:00</span></span>
+                <button class="btn btn-link btn-sm text-decoration-none p-0" id="btnResendOtp"
+                    onclick="resendOtp()" style="color:#818cf8;font-size:0.82rem;" disabled>
+                    <i class="bi bi-arrow-repeat me-1"></i> Resend Code
+                </button>
+            </div>
+        </div>
+
+        <!-- Verify Button -->
+        <button class="btn btn-synapse-primary w-100 mb-3" id="btnVerifyOtp" onclick="submit2FAVerification()">
+            <i class="bi bi-check2-circle me-1"></i> Verify &amp; Authenticate
+        </button>
+
+        <div class="text-center">
+            <a href="/login" class="text-decoration-none" style="color:#64748b;font-size:0.83rem;">
+                <i class="bi bi-arrow-left me-1"></i> Back to Password Login
+            </a>
         </div>
     </div>
 </div>
@@ -52,18 +258,41 @@
 
 {% block extra_scripts %}
 <script>
-// Auto-focus advance for 6-digit boxes
-const inputs = document.querySelectorAll('.otp-digit');
+// ── OTP Digit Navigation ────────────────────────────────────────────────
+const inputs = document.querySelectorAll('.otp-box');
 inputs.forEach((input, index) => {
     input.addEventListener('input', (e) => {
-        if (e.target.value.length === 1 && index < inputs.length - 1) {
-            inputs[index + 1].focus();
+        // Only allow digits
+        e.target.value = e.target.value.replace(/\D/g, '');
+        if (e.target.value.length === 1) {
+            e.target.classList.add('filled');
+            if (index < inputs.length - 1) inputs[index + 1].focus();
+        } else {
+            e.target.classList.remove('filled');
         }
     });
     input.addEventListener('keydown', (e) => {
-        if (e.key === 'Backspace' && !e.target.value && index > 0) {
-            inputs[index - 1].focus();
+        if (e.key === 'Backspace') {
+            if (!e.target.value && index > 0) {
+                inputs[index - 1].value = '';
+                inputs[index - 1].classList.remove('filled');
+                inputs[index - 1].focus();
+            } else {
+                e.target.classList.remove('filled');
+            }
         }
+    });
+    input.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+        [...pasted].slice(0, 6).forEach((ch, i) => {
+            if (inputs[i]) {
+                inputs[i].value = ch;
+                inputs[i].classList.add('filled');
+            }
+        });
+        const nextEmpty = Math.min(pasted.length, 5);
+        inputs[nextEmpty].focus();
     });
 });
 
@@ -71,6 +300,86 @@ function getOtpCode() {
     return Array.from(inputs).map(inp => inp.value.trim()).join('');
 }
 
+// ── Countdown Timer ─────────────────────────────────────────────────────
+let timerInterval = null;
+let timerSeconds = 0;
+
+function startTimer(seconds) {
+    clearInterval(timerInterval);
+    timerSeconds = seconds;
+    const timerVal = document.getElementById('timerVal');
+    const resendBtn = document.getElementById('btnResendOtp');
+    resendBtn.disabled = true;
+
+    timerInterval = setInterval(() => {
+        timerSeconds--;
+        const m = String(Math.floor(timerSeconds / 60)).padStart(2, '0');
+        const s = String(timerSeconds % 60).padStart(2, '0');
+        timerVal.textContent = `${m}:${s}`;
+        if (timerSeconds <= 0) {
+            clearInterval(timerInterval);
+            timerVal.textContent = 'Expired';
+            timerVal.classList.add('expired');
+            resendBtn.disabled = false;
+            document.getElementById('timerDisplay').innerHTML =
+                '<span style="color:#ef4444;font-size:0.8rem;"><i class="bi bi-exclamation-triangle me-1"></i>Code expired — please resend.</span>';
+        }
+    }, 1000);
+}
+
+// ── Send OTP ─────────────────────────────────────────────────────────────
+async function sendOtpCode() {
+    const email = document.getElementById('otpEmail').value.trim();
+    if (!email) {
+        showSendStatus('Please enter your email address first.', 'danger');
+        return;
+    }
+    const btn = document.getElementById('btnSendCode');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+    document.getElementById('sendStatus').innerHTML = '';
+
+    try {
+        const res = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showSendStatus('<i class="bi bi-envelope-check me-1"></i> Verification code sent to <strong>' + escHtml(email) + '</strong>', 'success');
+            startTimer(600); // 10 minutes
+            // Advance step indicator
+            document.getElementById('stepLine12').style.background = '#4f46e5';
+            inputs[0].focus();
+        } else {
+            showSendStatus(data.detail || 'Could not send code. Check email address.', 'danger');
+        }
+    } catch (err) {
+        showSendStatus('Network error. Please try again.', 'danger');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send me-1"></i> Send Code';
+    }
+}
+
+function showSendStatus(msg, type) {
+    const colors = { success: '#22c55e', danger: '#ef4444', warning: '#f59e0b' };
+    document.getElementById('sendStatus').innerHTML =
+        `<span style="color:${colors[type] || '#94a3b8'};font-size:0.82rem;">${msg}</span>`;
+}
+
+function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Resend ────────────────────────────────────────────────────────────────
+async function resendOtp() {
+    document.getElementById('timerVal').classList.remove('expired');
+    await sendOtpCode();
+}
+
+// ── Verify ────────────────────────────────────────────────────────────────
 async function submit2FAVerification() {
     const email = document.getElementById('otpEmail').value.trim();
     const code = getOtpCode();
@@ -98,7 +407,11 @@ async function submit2FAVerification() {
         if (!res.ok) {
             showToast(data.detail || 'Verification failed. Please check the code.', 'danger');
             btn.disabled = false;
-            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify & Authenticate';
+            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify &amp; Authenticate';
+            // Shake the OTP boxes
+            document.getElementById('otpInputs').style.animation = 'none';
+            inputs.forEach(i => { i.style.borderColor = '#ef4444'; });
+            setTimeout(() => inputs.forEach(i => { i.style.borderColor = ''; }), 1200);
             return;
         }
 
@@ -109,50 +422,35 @@ async function submit2FAVerification() {
             if (data.profile_id) localStorage.setItem('profile_id', data.profile_id);
         }
 
-        showToast('Verification successful! Logging in...', 'success');
+        // Step 3 complete
+        clearInterval(timerInterval);
+        document.getElementById('stepLine23').style.background = '#4f46e5';
+        const dot3 = document.getElementById('stepDot3');
+        dot3.classList.remove('idle');
+        dot3.classList.add('done');
+
+        showToast('✅ Verification successful! Logging you in...', 'success');
         setTimeout(() => {
             if (data.role === 'creator') {
                 window.location.href = '/dashboard/creator';
             } else {
                 window.location.href = '/dashboard/company';
             }
-        }, 800);
+        }, 900);
     } catch (err) {
         showToast('Error verifying code. Please try again.', 'danger');
         btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify & Authenticate';
+        btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify &amp; Authenticate';
     }
 }
 
-async function resend2FACode() {
-    const email = document.getElementById('otpEmail').value.trim();
-    if (!email) {
-        showToast('Please enter your account email to resend code.', 'danger');
-        return;
+// Auto-send if email pre-filled from URL
+window.addEventListener('DOMContentLoaded', () => {
+    const emailVal = document.getElementById('otpEmail').value.trim();
+    if (emailVal) {
+        // Small delay so page renders first
+        setTimeout(() => sendOtpCode(), 400);
     }
-
-    const resendBtn = document.getElementById('btnResendOtp');
-    resendBtn.disabled = true;
-    resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
-
-    try {
-        const res = await fetch('/api/auth/send-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-        if (res.ok) {
-            showToast(data.message || 'New 6-digit code sent to your email.', 'success');
-        } else {
-            showToast(data.detail || 'Could not send verification code.', 'danger');
-        }
-    } catch (err) {
-        showToast('Network error sending code.', 'danger');
-    } finally {
-        resendBtn.disabled = false;
-        resendBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Resend Code';
-    }
-}
+});
 </script>
 {% endblock %}

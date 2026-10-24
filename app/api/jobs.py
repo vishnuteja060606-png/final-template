@@ -5,13 +5,24 @@ from app.models.user import User
 from app.schemas.job import JobCreate, JobUpdate, JobResponse
 from app.services.job_service import job_service
 from app.services.company_service import company_service
-from app.services.auth_service import get_current_user, require_role
+from app.services.auth_service import get_current_user, get_current_user_optional, require_role
 
 router = APIRouter(prefix="/api/jobs", tags=["Creative Briefs / Jobs"])
 
 @router.get("", response_model=list[JobResponse])
-def list_published_jobs(limit: int = 50, db: Session = Depends(get_db)):
+def list_published_jobs(
+    limit: int = 50,
+    db: Session = Depends(get_db),
+    current_user: User | None = Depends(get_current_user_optional)
+):
     jobs = job_service.list_published(db, limit)
+
+    # ── Role-based isolation: companies/agencies ONLY see their own briefs ──
+    if current_user and current_user.role in ["company", "agency"]:
+        company_profile = company_service.get_by_user_id(db, current_user.id)
+        if company_profile:
+            jobs = [j for j in jobs if j.company_id == company_profile.id]
+
     return [
         JobResponse(
             id=j.id,

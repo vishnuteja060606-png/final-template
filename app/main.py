@@ -1,4 +1,4 @@
-from contextlib import asynccontextmanager
+﻿from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -452,3 +452,4 @@ def ai_builder_page(request: Request, current_user: User | None = Depends(get_cu
             "active_page": "ai_builder"
         }
     )
+

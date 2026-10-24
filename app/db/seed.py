@@ -1,5 +1,6 @@
 import os
 import json
+import logging
 from pathlib import Path
 from sqlalchemy.orm import Session
 from app.db.database import SessionLocal, init_db
@@ -16,6 +17,8 @@ from app.services.auth_service import AuthService
 from app.config import settings
 from app.services.embedding_service import embedding_service
 from app.services.ner_service import ner_service
+
+logger = logging.getLogger(__name__)
 
 def seed_advanced_indexes(db: Session) -> None:
     """Indexes all creators, jobs, and portfolios into sidecar embedding and NER tables."""
@@ -43,6 +46,69 @@ def seed_advanced_indexes(db: Session) -> None:
     except Exception as e:
         print(f"Notice: Indexing completed with note: {e}")
 
+def _backfill_missing_relations(db: Session) -> None:
+    """Safely backfills reviews, connections, and signals if an existing database lacks them."""
+    try:
+        creators = db.query(CreatorProfile).all()
+        companies = db.query(CompanyProfile).all()
+        if not creators or not companies:
+            return
+
+        # Backfill reviews
+        if db.query(CreatorReview).count() == 0 and len(companies) >= 2 and len(creators) >= 3:
+            r1 = CreatorReview(
+                creator_id=creators[0].id,
+                company_id=companies[0].id,
+                rating=5,
+                project_title="Quantum Sneaker 4K Commercial",
+                comment="Elena exceeded every expectation. Her Runway Gen-3 prompt control and 60fps upscaling made the shoe look hyper-realistic.",
+                tools_used="Runway Gen-3 + Topaz Video AI",
+                is_verified_engagement=True
+            )
+            r2 = CreatorReview(
+                creator_id=creators[1].id,
+                company_id=companies[1].id,
+                rating=5,
+                project_title="Cyberpunk Virtual Stage Backdrop",
+                comment="Marcus delivers repeatable node-based quality with ComfyUI. The Blender camera tracking gave our stream authentic 3D spatial presence.",
+                tools_used="ComfyUI + Blender",
+                is_verified_engagement=True
+            )
+            r3 = CreatorReview(
+                creator_id=creators[2].id,
+                company_id=companies[1].id,
+                rating=5,
+                project_title="Luxury Perfume Key Visuals",
+                comment="Aria has an extraordinary eye for lighting and luxury aesthetics. The Midjourney v6 + Flux.1 rendering was clean enough for 8K billboard printing.",
+                tools_used="Midjourney v6 + Flux.1",
+                is_verified_engagement=True
+            )
+            db.add_all([r1, r2, r3])
+            db.commit()
+
+        # Backfill connections
+        if db.query(CreatorConnection).count() == 0 and len(creators) >= 3:
+            conn1 = CreatorConnection(requester_id=creators[0].id, receiver_id=creators[1].id, status="accepted")
+            conn2 = CreatorConnection(requester_id=creators[0].id, receiver_id=creators[2].id, status="accepted")
+            db.add_all([conn1, conn2])
+            if len(creators) >= 4:
+                conn3 = CreatorConnection(requester_id=creators[3].id, receiver_id=creators[0].id, status="pending")
+                db.add(conn3)
+            db.commit()
+
+        # Backfill verification signals
+        if db.query(VerificationSignal).count() == 0 and len(creators) >= 3:
+            v1 = VerificationSignal(creator_id=creators[0].id, signal_type="tool_verified", badge_name="Runway Gen-3 Master", description="Verified mastery in generative video camera movement and motion prompting.")
+            v2 = VerificationSignal(creator_id=creators[0].id, signal_type="commercial_ready", badge_name="Commercial Grade Verified", description="Delivers broadcast-compliant 4K assets with cleared IP rights.")
+            v3 = VerificationSignal(creator_id=creators[1].id, signal_type="tool_verified", badge_name="ComfyUI Specialist", description="Verified technical proficiency in repeatable node-based generative workflows.")
+            v4 = VerificationSignal(creator_id=creators[2].id, signal_type="commercial_ready", badge_name="Luxury Brand Approved", description="Demonstrated high-end editorial and commercial product rendering.")
+            db.add_all([v1, v2, v3, v4])
+            db.commit()
+
+    except Exception as ex:
+        db.rollback()
+        logger.warning(f"Notice during backfilling relations: {ex}")
+
 def seed_database(db: Session | None = None) -> None:
     should_close = False
     if db is None:
@@ -53,6 +119,7 @@ def seed_database(db: Session | None = None) -> None:
     try:
         # Check if already seeded
         if db.query(User).count() > 0:
+            _backfill_missing_relations(db)
             from app.models.sidecar import EmbeddingRecord
             if db.query(EmbeddingRecord).count() == 0:
                 seed_advanced_indexes(db)

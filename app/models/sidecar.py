@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from sqlalchemy import String, Text, Integer, Float, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
@@ -23,6 +24,32 @@ class EmbeddingRecord(Base):
         Index("idx_embedding_entity", "entity_type", "entity_id", unique=True),
     )
 
+    @property
+    def vector(self) -> list[float]:
+        """Deserialize embedding JSON into float list."""
+        if not self.embedding_json:
+            return []
+        try:
+            return json.loads(self.embedding_json)
+        except Exception:
+            return []
+
+    def set_vector(self, vector_data: list[float]) -> None:
+        """Serialize float list into embedding JSON."""
+        self.embedding_json = json.dumps(vector_data)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "model_name": self.model_name,
+            "content_hash": self.content_hash,
+            "dimensions": len(self.vector),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
 
 class ExtractedEntity(Base):
     """
@@ -43,3 +70,16 @@ class ExtractedEntity(Base):
     __table_args__ = (
         Index("idx_entity_lookup", "entity_type", "entity_id", "category"),
     )
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "category": self.category,
+            "raw_value": self.raw_value,
+            "canonical_value": self.canonical_value,
+            "provenance": self.provenance,
+            "confidence": self.confidence,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }

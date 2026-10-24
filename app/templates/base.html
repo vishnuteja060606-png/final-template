@@ -12,9 +12,9 @@
     <link href="/static/css/style.css" rel="stylesheet">
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body class="d-flex flex-column min-vh-100 bg-dark text-light">
     <!-- Top Navigation with Reviewer-Requested Role Logic & Currency Switcher -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-2">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-2 border-bottom border-secondary border-opacity-25">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="/">
                 <span class="badge bg-primary p-2 rounded-3"><i class="bi bi-cpu-fill"></i></span>
@@ -29,14 +29,14 @@
                     {# Role-Based Rule: When logged in as creator, do NOT show Discover Creators #}
                     {% if not current_user or current_user.role != 'creator' %}
                         <li class="nav-item">
-                            <a class="nav-link {% if active_page == 'creators' %}active fw-semibold{% endif %}" href="/creators">
+                            <a class="nav-link {% if active_page == 'creators' %}active fw-semibold{% endif %}" href="/creators" id="navDiscoverCreators">
                                 <i class="bi bi-people me-1"></i> Discover Creators
                             </a>
                         </li>
                     {% endif %}
 
                     <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'projects' %}active fw-semibold{% endif %}" href="/projects">
+                        <a class="nav-link {% if active_page == 'projects' %}active fw-semibold{% endif %}" href="/projects" id="navCreativeBriefs">
                             <i class="bi bi-briefcase me-1"></i> Creative Briefs
                         </a>
                     </li>
@@ -44,7 +44,7 @@
                     {# Role-Based Rule: When logged in as company, do NOT show Brands and Companies #}
                     {% if not current_user or current_user.role not in ['company', 'agency'] %}
                         <li class="nav-item">
-                            <a class="nav-link {% if active_page == 'companies' %}active fw-semibold{% endif %}" href="/companies">
+                            <a class="nav-link {% if active_page == 'companies' %}active fw-semibold{% endif %}" href="/companies" id="navBrandsCompanies">
                                 <i class="bi bi-building me-1"></i> Brands & Companies
                             </a>
                         </li>
@@ -52,14 +52,14 @@
 
                     {% if current_user and current_user.role == 'creator' %}
                         <li class="nav-item">
-                            <a class="nav-link {% if active_page == 'dashboard' %}active fw-semibold{% endif %}" href="/dashboard/creator">
+                            <a class="nav-link {% if active_page == 'dashboard' %}active fw-semibold{% endif %}" href="/dashboard/creator" id="navCreatorDashboard">
                                 <i class="bi bi-grid-1x2-fill me-1"></i> My Portfolio & Connections
                             </a>
                         </li>
                     {% endif %}
 
                     <li class="nav-item">
-                        <a class="nav-link {% if active_page == 'ai_builder' %}active text-warning fw-bold{% else %}text-warning{% endif %}" href="/ai-builder">
+                        <a class="nav-link {% if active_page == 'ai_builder' %}active text-warning fw-bold{% else %}text-warning{% endif %}" href="/ai-builder" id="navAiBuilder">
                             <i class="bi bi-magic me-1"></i> AI Brief Builder
                         </a>
                     </li>
@@ -74,12 +74,12 @@
 
                     {% if current_user %}
                         <div class="dropdown">
-                            <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2 py-1 px-3" type="button" data-bs-toggle="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2 py-1 px-3" type="button" data-bs-toggle="dropdown" id="userMenuDropdown">
                                 <i class="bi bi-person-circle"></i>
                                 <span class="fw-semibold">{{ current_user.username }}</span>
                                 <span class="badge bg-primary text-uppercase">{{ current_user.role }}</span>
                             </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow">
+                            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userMenuDropdown">
                                 {% if current_user.role == 'creator' %}
                                     <li><a class="dropdown-item" href="/dashboard/creator"><i class="bi bi-speedometer2 me-2"></i> Creator Dashboard</a></li>
                                     {% if current_user.creator_profile %}
@@ -96,8 +96,8 @@
                             </ul>
                         </div>
                     {% else %}
-                        <a href="/login" class="btn btn-outline-light btn-sm px-3">Log In</a>
-                        <a href="/register" class="btn btn-primary btn-sm px-3 fw-medium">Join Marketplace</a>
+                        <a href="/login" class="btn btn-outline-light btn-sm px-3" id="navLoginBtn">Log In</a>
+                        <a href="/register" class="btn btn-primary btn-sm px-3 fw-medium" id="navRegisterBtn">Join Marketplace</a>
                     {% endif %}
                 </div>
             </div>
@@ -105,9 +105,24 @@
     </nav>
 
     <!-- Main Content Block -->
-    <main class="main-content">
+    <main class="main-content flex-grow-1">
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Global Footer -->
+    <footer class="bg-dark text-secondary border-top border-secondary border-opacity-25 py-4 mt-auto">
+        <div class="container d-flex flex-wrap justify-content-between align-items-center gap-3">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary p-1 rounded-2"><i class="bi bi-cpu-fill"></i></span>
+                <span class="text-light fw-bold">Synapse Marketplace</span>
+                <span class="text-muted small ms-2">© 2026 AI Content Creator Platform</span>
+            </div>
+            <div class="d-flex align-items-center gap-3 small">
+                <span class="badge bg-dark border border-secondary text-secondary"><i class="bi bi-shield-check text-success me-1"></i> Role Guardrails Active</span>
+                <span class="badge bg-dark border border-secondary text-secondary"><i class="bi bi-currency-rupee text-warning me-1"></i> Primary Currency: INR (₹)</span>
+            </div>
+        </div>
+    </footer>
 
     <!-- Global Toast Container -->
     <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>
@@ -115,15 +130,15 @@
     <!-- Universal Media Preview Modal -->
     <div class="modal fade" id="mediaPreviewModal" tabindex="-1" aria-labelledby="mediaModalTitle" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-lg">
-            <div class="modal-content border-0 shadow-lg">
-                <div class="modal-header">
+            <div class="modal-content border-0 shadow-lg bg-dark text-light">
+                <div class="modal-header border-secondary">
                     <h5 class="modal-title fw-bold" id="mediaModalTitle">Media Showcase</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body text-center p-3" id="mediaModalBody">
                     <!-- Media inserted by main.js openMediaModal -->
                 </div>
-                <div class="modal-footer d-flex justify-content-between p-3 border-top" id="mediaModalMeta">
+                <div class="modal-footer d-flex justify-content-between p-3 border-secondary border-top" id="mediaModalMeta">
                     <!-- Metadata tags inserted dynamically -->
                 </div>
             </div>

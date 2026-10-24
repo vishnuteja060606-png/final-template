@@ -28,6 +28,20 @@ class UserResponse(BaseModel):
     email: str
     role: str
     is_active: bool
+    is_2fa_enabled: bool = True
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+# Two-Factor Email Authentication Schemas
+class OTPRequest(BaseModel):
+    email: EmailStr
+
+class OTPVerify(BaseModel):
+    email: EmailStr
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+
+class OTPResponse(BaseModel):
+    message: str
+    email: str
+    expires_in_minutes: int = 10

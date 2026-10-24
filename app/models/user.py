@@ -11,6 +11,12 @@ class User(Base):
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     role: Mapped[str] = mapped_column(String(50), nullable=False, default="creator")  # creator, company, agency, admin
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    
+    # Two-factor authentication (2FA) via email
+    is_2fa_enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    email_otp_code: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    otp_expires_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime, default=get_utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=get_utc_now, onupdate=get_utc_now)
 

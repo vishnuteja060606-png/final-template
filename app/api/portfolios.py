@@ -2,7 +2,8 @@ from fastapi import APIRouter, Depends, Form, File, UploadFile, HTTPException, s
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.portfolio import PortfolioItemResponse, PortfolioItemCreate, PortfolioItemUpdate
+from app.models.portfolio import PortfolioItem
+from app.schemas.portfolio import PortfolioItemResponse, PortfolioItemCreate, PortfolioItemUpdate, PortfolioPinToggleRequest
 from app.services.portfolio_service import portfolio_service
 from app.services.creator_service import creator_service
 from app.services.auth_service import get_current_user, require_role
@@ -102,3 +103,51 @@ def delete_portfolio_item(
         )
     portfolio_service.delete_item(db, item)
     return None
+
+@router.post("/{item_id}/approve", response_model=PortfolioItemResponse)
+def approve_portfolio_work(
+    item_id: int,
+    note: str | None = None,
+    current_user: User = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    """
+    Moderation endpoint: Approve creative portfolio piece for platform publication.
+    """
+    return portfolio_service.approve_item(db, item_id, note)
+
+@router.post("/{item_id}/reject", response_model=PortfolioItemResponse)
+def reject_portfolio_work(
+    item_id: int,
+    reason: str | None = None,
+    current_user: User = Depends(require_role(["admin"])),
+    db: Session = Depends(get_db)
+):
+    """
+    Moderation endpoint: Reject creative portfolio piece.
+    """
+    return portfolio_service.reject_item(db, item_id, reason)
+
+@router.post("/{item_id}/pin", response_model=PortfolioItemResponse)
+@router.put("/{item_id}/pin", response_model=PortfolioItemResponse)
+def toggle_pin_portfolio_work(
+    item_id: int,
+    payload: PortfolioPinToggleRequest,
+    current_user: User = Depends(require_role(["creator", "admin"])),
+    db: Session = Depends(get_db)
+):
+    """
+    Reviewer Feature: Creator can pin their best work (up to 3 items).
+    """
+    profile = creator_service.get_by_user_id(db, current_user.id)
+    if profile:
+        creator_id = profile.id
+    elif current_user.role == "admin":
+        item = db.query(PortfolioItem).filter(PortfolioItem.id == item_id).first()
+        if not item:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Portfolio item not found.")
+        creator_id = item.creator_id
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Creator profile not found.")
+    
+    return creator_service.toggle_pin_portfolio_item(db, creator_id, item_id, payload.is_pinned)

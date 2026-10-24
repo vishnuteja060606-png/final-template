@@ -20,13 +20,18 @@
                         <label for="email" class="form-label small fw-semibold">Email Address</label>
                         <input type="email" class="form-control" id="email" required placeholder="creator@example.com">
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label for="password" class="form-label small fw-semibold">Password</label>
                         <input type="password" class="form-control" id="password" required placeholder="••••••••">
                     </div>
 
-                    <button type="submit" id="loginBtn" class="btn btn-primary w-100 py-2 fw-semibold">
+                    <button type="submit" id="loginBtn" class="btn btn-primary w-100 py-2 fw-semibold mb-2 shadow-sm">
                         Log In
+                    </button>
+
+                    <!-- Two-Step Verification via Email Option -->
+                    <button type="button" class="btn btn-outline-info w-100 py-2 fw-semibold small" onclick="handleSend2FAFromLogin()">
+                        <i class="bi bi-envelope-check me-1"></i> Log In via 2FA Email Code
                     </button>
                 </form>
 
@@ -93,6 +98,34 @@ async function handleLoginSubmit(event) {
         alertBox.classList.remove('d-none');
         btn.disabled = false;
         btn.innerHTML = 'Log In';
+    }
+}
+
+async function handleSend2FAFromLogin() {
+    const email = document.getElementById('email').value.trim();
+    if (!email) {
+        showToast('Please enter your email address to receive a 2FA verification code.', 'danger');
+        document.getElementById('email').focus();
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.detail || 'Could not send 2FA email code.', 'danger');
+            return;
+        }
+        showToast('Two-step verification code sent to your email!', 'success');
+        setTimeout(() => {
+            window.location.href = `/verify-otp?email=${encodeURIComponent(email)}`;
+        }, 800);
+    } catch (err) {
+        showToast('Network error sending verification email.', 'danger');
     }
 }
 </script>

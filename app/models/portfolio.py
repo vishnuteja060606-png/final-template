@@ -23,10 +23,15 @@ class PortfolioItem(Base):
     tags: Mapped[str | None] = mapped_column(Text, nullable=True)  # Comma-separated
     workflow: Mapped[str | None] = mapped_column(Text, nullable=True)
     
-    # Reviewer Requested Features
+    # Reviewer & Moderation Features
     is_pinned: Mapped[bool] = mapped_column(Boolean, default=False, index=True)  # Pin best work (max 3 per creator)
     pin_order: Mapped[int] = mapped_column(Integer, default=0)
     views_count: Mapped[int] = mapped_column(Integer, default=0)
+    
+    # Work Approval Moderation (creator can only post approved works)
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
+    approval_status: Mapped[str] = mapped_column(String(50), default="approved", index=True)  # 'approved', 'pending', 'rejected'
+    moderation_note: Mapped[str | None] = mapped_column(Text, nullable=True)
     
     created_at: Mapped[datetime] = mapped_column(DateTime, default=get_utc_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=get_utc_now, onupdate=get_utc_now)

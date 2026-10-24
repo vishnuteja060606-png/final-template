@@ -11,9 +11,17 @@
     <!-- Custom CSS -->
     <link href="/static/css/style.css" rel="stylesheet">
     {% block extra_head %}{% endblock %}
+    {% if not current_user and active_page not in ['auth', 'login', 'register'] %}
+    <style>
+        body {
+            overflow: hidden !important;
+            height: 100vh !important;
+        }
+    </style>
+    {% endif %}
 </head>
 <body>
-    <!-- Top Navigation with Reviewer-Requested Role Logic & Currency Switcher -->
+    <!-- Top Navigation with Strict Role-Based Visibility & Currency Switcher -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-2">
         <div class="container">
             <a class="navbar-brand d-flex align-items-center gap-2" href="/">
@@ -26,7 +34,7 @@
             
             <div class="collapse navbar-collapse" id="navContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
-                    {# Role-Based Rule: When logged in as creator, do NOT show Discover Creators #}
+                    {# Rule: Creator should NOT able to see other creators #}
                     {% if not current_user or current_user.role != 'creator' %}
                         <li class="nav-item">
                             <a class="nav-link {% if active_page == 'creators' %}active fw-semibold{% endif %}" href="/creators">
@@ -41,7 +49,7 @@
                         </a>
                     </li>
 
-                    {# Role-Based Rule: When logged in as company, do NOT show Brands and Companies #}
+                    {# Rule: Companies should NOT see other companies #}
                     {% if not current_user or current_user.role not in ['company', 'agency'] %}
                         <li class="nav-item">
                             <a class="nav-link {% if active_page == 'companies' %}active fw-semibold{% endif %}" href="/companies">
@@ -53,7 +61,13 @@
                     {% if current_user and current_user.role == 'creator' %}
                         <li class="nav-item">
                             <a class="nav-link {% if active_page == 'dashboard' %}active fw-semibold{% endif %}" href="/dashboard/creator">
-                                <i class="bi bi-grid-1x2-fill me-1"></i> My Portfolio & Connections
+                                <i class="bi bi-grid-1x2-fill me-1"></i> My Portfolio & Studio
+                            </a>
+                        </li>
+                    {% elif current_user and current_user.role in ['company', 'agency'] %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if active_page == 'dashboard' %}active fw-semibold{% endif %}" href="/dashboard/company">
+                                <i class="bi bi-briefcase-fill me-1"></i> Brand Studio & Bids
                             </a>
                         </li>
                     {% endif %}
@@ -108,6 +122,33 @@
     <main class="main-content">
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Strict Mandatory Auth Wall Overlay ("No login, no web scrolling") -->
+    {% if not current_user and active_page not in ['auth', 'login', 'register'] %}
+    <div id="authGateOverlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="z-index: 99999; background: rgba(15, 23, 42, 0.88); backdrop-filter: blur(12px);">
+        <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5 text-center text-white" style="max-width: 480px; width: 90%; background: #1e293b; border: 1px solid rgba(255,255,255,0.1) !important;">
+            <div class="badge bg-primary-subtle text-primary p-3 rounded-circle fs-1 mb-3 mx-auto" style="width: 76px; height: 76px; display: flex; align-items: center; justify-content: center;">
+                <i class="bi bi-shield-lock-fill"></i>
+            </div>
+            <h3 class="fw-bold mb-2">Login Required</h3>
+            <p class="text-white-50 small mb-4">
+                Synapse is a verified AI creative marketplace. Access to creator portfolios, brand briefs, and commercial productions requires an authenticated account.<br>
+                <strong class="text-warning">Guest web scrolling is restricted.</strong>
+            </p>
+            <div class="d-grid gap-2">
+                <a href="/login" class="btn btn-primary btn-lg fw-semibold shadow">
+                    <i class="bi bi-box-arrow-in-right me-1"></i> Log In to Explore
+                </a>
+                <a href="/register" class="btn btn-outline-light fw-semibold">
+                    <i class="bi bi-person-plus me-1"></i> Create Free Account
+                </a>
+                <a href="/verify-otp" class="btn btn-link btn-sm text-decoration-none text-white-50 mt-1">
+                    <i class="bi bi-envelope-check me-1"></i> Two-Step 2FA Email Verification
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Global Toast Container -->
     <div id="toastContainer" class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 1080;"></div>

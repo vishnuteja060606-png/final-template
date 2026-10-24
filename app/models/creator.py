@@ -19,8 +19,8 @@ class CreatorProfile(Base):
     experience_level: Mapped[str | None] = mapped_column(String(50), nullable=True)
     location: Mapped[str | None] = mapped_column(String(100), nullable=True)
     website: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    social_links: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: {twitter, instagram, artstation, youtube, github, linkedin}
-    specifications: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: {hardware, resolution, max_fps, lora_training, turnaround_days}
+    social_links: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: {twitter, instagram, artstation, youtube, github, linkedin, website}
+    specifications: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON: {hardware, resolution, max_fps, lora_training, turnaround_days, aspect_ratios}
     hourly_rate_inr: Mapped[int] = mapped_column(Integer, default=1500)  # Primary currency in INR (₹)
     profile_image_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     
@@ -34,13 +34,30 @@ class CreatorProfile(Base):
 
     # Relationships
     user = relationship("User", back_populates="creator_profile")
-    portfolio_items = relationship("PortfolioItem", back_populates="creator", cascade="all, delete-orphan", order_by="desc(PortfolioItem.is_pinned), desc(PortfolioItem.created_at)")
+    portfolio_items = relationship(
+        "PortfolioItem",
+        back_populates="creator",
+        cascade="all, delete-orphan",
+        order_by="desc(PortfolioItem.is_pinned), asc(PortfolioItem.pin_order), desc(PortfolioItem.created_at)"
+    )
     verification_signals = relationship("VerificationSignal", back_populates="creator", cascade="all, delete-orphan")
     engagements = relationship("Engagement", back_populates="creator", cascade="all, delete-orphan")
     company_views = relationship("CompanyProfileView", back_populates="creator", cascade="all, delete-orphan")
     reviews_received = relationship("CreatorReview", back_populates="creator", cascade="all, delete-orphan", order_by="desc(CreatorReview.created_at)")
-    connections_sent = relationship("CreatorConnection", foreign_keys="CreatorConnection.requester_id", back_populates="requester", cascade="all, delete-orphan")
-    connections_received = relationship("CreatorConnection", foreign_keys="CreatorConnection.receiver_id", back_populates="receiver", cascade="all, delete-orphan")
+    connections_sent = relationship(
+        "CreatorConnection",
+        foreign_keys="CreatorConnection.requester_id",
+        back_populates="requester",
+        cascade="all, delete-orphan",
+        order_by="desc(CreatorConnection.created_at)"
+    )
+    connections_received = relationship(
+        "CreatorConnection",
+        foreign_keys="CreatorConnection.receiver_id",
+        back_populates="receiver",
+        cascade="all, delete-orphan",
+        order_by="desc(CreatorConnection.created_at)"
+    )
 
     def skills_list(self) -> list[str]:
         if not self.skills:
@@ -55,16 +72,22 @@ class CreatorProfile(Base):
     def specifications_dict(self) -> dict:
         if not self.specifications:
             return {}
+        if isinstance(self.specifications, dict):
+            return self.specifications
         try:
-            return json.loads(self.specifications)
+            val = json.loads(self.specifications)
+            return val if isinstance(val, dict) else {"raw": str(val)}
         except Exception:
             return {"raw": self.specifications}
 
     def social_links_dict(self) -> dict:
         if not self.social_links:
             return {}
+        if isinstance(self.social_links, dict):
+            return self.social_links
         try:
-            return json.loads(self.social_links)
+            val = json.loads(self.social_links)
+            return val if isinstance(val, dict) else {}
         except Exception:
             return {}
 
@@ -90,7 +113,15 @@ class CreatorProfile(Base):
 
     @property
     def pinned_portfolio_items(self) -> list:
-        return [p for p in (self.portfolio_items or []) if getattr(p, "is_pinned", False)][:3]
+        """Featured best works (max 3 items), sorted by pin order."""
+        pinned = [p for p in (self.portfolio_items or []) if getattr(p, "is_pinned", False)]
+        return sorted(
+            pinned,
+            key=lambda p: (
+                getattr(p, "pin_order", 0) if (getattr(p, "pin_order", 0) or 0) > 0 else 99,
+                -(getattr(p, "id", 0) or 0)
+            )
+        )[:3]
 
     @property
     def accepted_connections_count(self) -> int:
@@ -102,3 +133,17 @@ class CreatorProfile(Base):
             if c.status == "accepted":
                 count += 1
         return count
+
+    @property
+    def pending_incoming_connections(self) -> list:
+        return [c for c in (self.connections_received or []) if c.status == "pending"]
+
+    @property
+    def pending_outgoing_connections(self) -> list:
+        return [c for c in (self.connections_sent or []) if c.status == "pending"]
+
+    @property
+    def accepted_connections(self) -> list:
+        sent = [c for c in (self.connections_sent or []) if c.status == "accepted"]
+        rec = [c for c in (self.connections_received or []) if c.status == "accepted"]
+        return sent + rec

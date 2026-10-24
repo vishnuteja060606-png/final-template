@@ -18,8 +18,15 @@ def list_companies(
     query: str | None = Query(None, description="Search companies by name or tag"),
     industry: str | None = Query(None, description="Filter by industry"),
     limit: int = Query(50, ge=1, le=100),
+    current_user: User | None = Depends(get_current_user_optional),
     db: Session = Depends(get_db)
 ):
+    # Rule: Companies should not see other companies
+    if current_user and current_user.role in ["company", "agency"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access restricted: Companies are not permitted to browse other companies."
+        )
     return company_service.list_companies(db, query=query, industry=industry, limit=limit)
 
 @router.get("/me", response_model=CompanyProfileResponse)
@@ -36,7 +43,18 @@ def get_my_company_profile(
     return profile
 
 @router.get("/{company_id}", response_model=CompanyProfileResponse)
-def get_company_by_id(company_id: int, db: Session = Depends(get_db)):
+def get_company_by_id(
+    company_id: int,
+    current_user: User | None = Depends(get_current_user_optional),
+    db: Session = Depends(get_db)
+):
+    # Rule: Companies should not see other companies
+    if current_user and current_user.role in ["company", "agency"] and current_user.company_profile and current_user.company_profile.id != company_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access restricted: Companies cannot view other company profiles."
+        )
+
     profile = company_service.get_by_id(db, company_id)
     if not profile:
         raise HTTPException(

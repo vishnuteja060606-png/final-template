@@ -197,19 +197,26 @@
         {% endif %}
     </div>
 
-    <!-- Outgoing Engagements Section -->
+    <!-- Outgoing Engagements & Price Bidding Section -->
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <h4 class="fw-bold mb-3"><i class="bi bi-send me-2 text-primary"></i>Creator Proposals & Outreach</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0"><i class="bi bi-send me-2 text-primary"></i>Creator Proposals & Price Negotiations</h4>
+                <p class="text-secondary small mb-0">Track outgoing direct outreach, price bids in INR, and creator counter-offers.</p>
+            </div>
+            <span class="badge bg-primary px-3 py-2">{{ engagements|length }} Direct Proposals</span>
+        </div>
         {% if engagements %}
         <div class="table-responsive">
             <table class="table align-middle">
                 <thead>
                     <tr class="text-secondary small">
                         <th>Creator</th>
-                        <th>Proposal Message</th>
-                        <th>Proposed Budget</th>
+                        <th>Proposal & Brief</th>
+                        <th>Price Bid & Negotiation</th>
                         <th>Status</th>
                         <th>Sent Date</th>
+                        <th class="text-end">Action</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -220,13 +227,29 @@
                             <a href="/creators/{{ eng.creator_id }}" class="small text-decoration-none">View Profile</a>
                         </td>
                         <td>
-                            <p class="small text-secondary mb-0" style="max-width: 320px;">{{ eng.message }}</p>
+                            <p class="small text-secondary mb-1" style="max-width: 260px;">{{ eng.message }}</p>
                             {% if eng.job %}
-                            <span class="badge bg-light text-primary border mt-1">Brief: {{ eng.job.title }}</span>
+                            <a href="/projects/{{ eng.job_id }}" class="badge bg-light text-primary border text-decoration-none">
+                                <i class="bi bi-briefcase me-1"></i>Brief: {{ eng.job.title }}
+                            </a>
                             {% endif %}
                         </td>
                         <td>
-                            <span class="badge bg-success-subtle text-success">{{ eng.proposed_budget or 'Negotiable' }}</span>
+                            <div class="fw-bold text-success" data-inr="{{ eng.bid_amount_inr or eng.active_price_inr }}">
+                                Initial Bid: ₹{{ eng.bid_amount_inr or eng.active_price_inr }}
+                            </div>
+                            {% if eng.counter_offer_inr %}
+                            <div class="small fw-semibold text-primary">
+                                Counter: ₹{{ eng.counter_offer_inr }}
+                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">by {{ eng.last_negotiated_by }}</span>
+                            </div>
+                            {% endif %}
+                            {% if eng.negotiation_notes %}
+                            <div class="small text-muted fst-italic mt-1" style="max-width: 200px;">"{{ eng.negotiation_notes }}"</div>
+                            {% endif %}
+                            <span class="badge bg-light text-dark border small mt-1">
+                                <i class="bi bi-tag me-1"></i>{{ eng.negotiation_status or 'initial_bid' }}
+                            </span>
                         </td>
                         <td>
                             <span class="badge {% if eng.status == 'accepted' %}bg-success{% elif eng.status == 'declined' %}bg-danger{% else %}bg-warning text-dark{% endif %} text-uppercase">
@@ -234,6 +257,29 @@
                             </span>
                         </td>
                         <td class="small text-muted">{{ eng.created_at.strftime('%b %d, %Y') }}</td>
+                        <td class="text-end">
+                            {% if eng.status == 'pending' %}
+                            <div class="d-flex flex-column gap-1 align-items-end" style="min-width: 140px;">
+                                {% if eng.negotiation_status == 'counter_offered' and eng.last_negotiated_by == 'creator' %}
+                                <button class="btn btn-sm btn-success w-100" onclick="handleCompanyAcceptBid({{ eng.id }})">
+                                    <i class="bi bi-check-lg me-1"></i>Accept Counter ₹{{ eng.counter_offer_inr }}
+                                </button>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-primary w-100" onclick="openCompanyNegotiateModal({{ eng.id }}, '{{ eng.creator.display_name if eng.creator else 'Creator' }}', {{ eng.active_price_inr }})">
+                                    <i class="bi bi-arrow-left-right me-1"></i>Counter-Offer
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger w-100" onclick="updateCompanyEngagementStatus({{ eng.id }}, 'declined')">
+                                    Decline
+                                </button>
+                            </div>
+                            {% elif eng.status == 'accepted' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle p-2">
+                                <i class="bi bi-check2-all me-1"></i>Agreed at ₹{{ eng.active_price_inr }}
+                            </span>
+                            {% else %}
+                            <span class="small text-muted">Completed</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -242,7 +288,7 @@
         {% else %}
         <div class="text-center py-4">
             <i class="bi bi-people text-muted fs-3 mb-2"></i>
-            <p class="text-secondary small mb-0">No proposals sent yet. Explore creators and click "Select / Contact Creator" to initiate outreach.</p>
+            <p class="text-secondary small mb-0">No proposals sent yet. Explore creators and click "Hire / Select Creator" to initiate outreach with price bids.</p>
         </div>
         {% endif %}
     </div>
@@ -312,7 +358,7 @@
 
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Budget Range</label>
-                            <input type="text" class="form-control" id="jobBudget" placeholder="e.g. $3,000 - $5,000">
+                            <input type="text" class="form-control" id="jobBudget" placeholder="e.g. ₹50,000 - ₹1,00,000">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Commercial Rights</label>
@@ -323,6 +369,43 @@
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
                     <button type="submit" id="submitBriefBtn" class="btn btn-primary px-4">Publish Brief</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Company Counter-Offer / Negotiation -->
+<div class="modal fade" id="companyNegotiateModal" tabindex="-1" aria-labelledby="companyNegotiateLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="companyNegotiateLabel">Price Negotiation & Counter-Offer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="companyNegotiateForm" onsubmit="submitCompanyCounterOffer(event)">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="companyNegotiateEngagementId">
+                    <div class="alert alert-info py-2 small mb-3">
+                        Negotiating with creator: <strong id="companyNegotiateCreatorName">Creator</strong>.<br>
+                        Current Active Price: <strong id="companyNegotiateCurrentPrice">₹0</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Your Counter-Offer (INR ₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="companyNegotiateAmountInr" required min="500" step="100" placeholder="e.g. 30000">
+                        </div>
+                        <div class="form-text">Specify revised proposed amount in Indian Rupees (INR).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Terms / Revision Notes</label>
+                        <textarea class="form-control" id="companyNegotiateNotes" rows="3" placeholder="e.g. We can do ₹32,000 for 4K delivery with 3 raw source cutdowns included."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="companySubmitCounterBtn" class="btn btn-primary px-4">Send Counter-Offer</button>
                 </div>
             </form>
         </div>
@@ -408,6 +491,87 @@ async function deleteJob(jobId) {
         }
     } catch (e) {
         showToast('Error deleting brief.', 'danger');
+    }
+}
+
+function openCompanyNegotiateModal(engagementId, creatorName, currentPrice) {
+    document.getElementById('companyNegotiateEngagementId').value = engagementId;
+    document.getElementById('companyNegotiateCreatorName').textContent = creatorName;
+    document.getElementById('companyNegotiateCurrentPrice').textContent = '₹' + Number(currentPrice).toLocaleString('en-IN');
+    document.getElementById('companyNegotiateAmountInr').value = currentPrice || 25000;
+    const modal = new bootstrap.Modal(document.getElementById('companyNegotiateModal'));
+    modal.show();
+}
+
+async function handleCompanyAcceptBid(engagementId) {
+    if (!confirm('Accept this creator counter-offer and confirm the engagement deal?')) return;
+    try {
+        const res = await fetch(`/api/engagements/${engagementId}/accept-bid`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            showToast('Deal agreed and confirmed!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Failed to accept counter-offer.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error accepting counter-offer.', 'danger');
+    }
+}
+
+async function submitCompanyCounterOffer(event) {
+    event.preventDefault();
+    const btn = document.getElementById('companySubmitCounterBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+    const engagementId = document.getElementById('companyNegotiateEngagementId').value;
+    const amount = parseInt(document.getElementById('companyNegotiateAmountInr').value);
+    const notes = document.getElementById('companyNegotiateNotes').value.trim();
+
+    try {
+        const res = await fetch(`/api/engagements/${engagementId}/counter-offer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                counter_offer_inr: amount,
+                notes: notes || null
+            })
+        });
+        if (res.ok) {
+            showToast('Counter-offer sent to creator!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Failed to send counter-offer.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = 'Send Counter-Offer';
+        }
+    } catch (e) {
+        showToast('Error sending counter-offer.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Send Counter-Offer';
+    }
+}
+
+async function updateCompanyEngagementStatus(engagementId, newStatus) {
+    try {
+        const res = await fetch(`/api/engagements/${engagementId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (res.ok) {
+            showToast(`Proposal ${newStatus}!`, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast('Failed to update proposal.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error updating proposal.', 'danger');
     }
 }
 </script>

@@ -116,7 +116,7 @@ def login_page(request: Request, current_user: User | None = Depends(get_current
         if current_user.role == "creator":
             return RedirectResponse(url="/dashboard/creator")
         return RedirectResponse(url="/dashboard/company")
-    return templates.TemplateResponse(request=request, name="auth/login.html", context={"current_user": None})
+    return templates.TemplateResponse(request=request, name="auth/login.html", context={"current_user": None, "active_page": "auth"})
 
 @app.get("/register", response_class=HTMLResponse, tags=["Web Views"])
 def register_page(request: Request, current_user: User | None = Depends(get_current_user_optional)):
@@ -124,7 +124,15 @@ def register_page(request: Request, current_user: User | None = Depends(get_curr
         if current_user.role == "creator":
             return RedirectResponse(url="/dashboard/creator")
         return RedirectResponse(url="/dashboard/company")
-    return templates.TemplateResponse(request=request, name="auth/register.html", context={"current_user": None})
+    return templates.TemplateResponse(request=request, name="auth/register.html", context={"current_user": None, "active_page": "auth"})
+
+@app.get("/verify-otp", response_class=HTMLResponse, tags=["Web Views"])
+def verify_otp_page(request: Request, email: str | None = None, current_user: User | None = Depends(get_current_user_optional)):
+    return templates.TemplateResponse(
+        request=request,
+        name="auth/verify_otp.html",
+        context={"request": request, "current_user": current_user, "email": email or "", "active_page": "auth"}
+    )
 
 @app.get("/creators", response_class=HTMLResponse, tags=["Web Views"])
 def creators_discovery_page(
@@ -143,6 +151,10 @@ def creators_discovery_page(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional)
 ):
+    # Rule: Creator should not able to see other creators
+    if current_user and current_user.role == "creator":
+        return RedirectResponse(url="/projects?notice=creators_restricted", status_code=303)
+
     if search_mode == "semantic" and query and query.strip():
         from app.services.advanced_container import container
         sem_results = container.embedding_service.search_similar(query=query, entity_type="creator", top_k=limit, db=db)
@@ -219,6 +231,10 @@ def creator_detail_page(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional)
 ):
+    # Rule: Creator should not able to see other creators
+    if current_user and current_user.role == "creator" and current_user.creator_profile and current_user.creator_profile.id != creator_id:
+        return RedirectResponse(url="/dashboard/creator?notice=creators_restricted", status_code=303)
+
     creator = creator_service.get_by_id(db, creator_id)
     if not creator:
         raise HTTPException(status_code=404, detail="Creator profile not found.")
@@ -313,6 +329,10 @@ def companies_directory_page(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional)
 ):
+    # Rule: Companies should not see other companies
+    if current_user and current_user.role in ["company", "agency"]:
+        return RedirectResponse(url="/creators?notice=companies_restricted", status_code=303)
+
     companies = company_service.list_companies(db, query=query, industry=industry)
     return templates.TemplateResponse(
         request=request,
@@ -334,6 +354,10 @@ def company_detail_page(
     db: Session = Depends(get_db),
     current_user: User | None = Depends(get_current_user_optional)
 ):
+    # Rule: Companies should not see other companies
+    if current_user and current_user.role in ["company", "agency"] and current_user.company_profile and current_user.company_profile.id != company_id:
+        return RedirectResponse(url="/dashboard/company?notice=companies_restricted", status_code=303)
+
     company, _ = company_service.record_company_profile_check(db, company_id, current_user)
     recent_checks = company_service.get_recent_creator_checks_for_company(db, company_id, limit=5)
     return templates.TemplateResponse(

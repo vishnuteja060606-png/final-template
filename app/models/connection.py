@@ -26,3 +26,9 @@ class CreatorConnection(Base):
     __table_args__ = (
         UniqueConstraint("requester_id", "receiver_id", name="uq_creator_connection_pair"),
     )
+
+    def other_creator(self, current_creator_id: int):
+        """Returns the other CreatorProfile in this connection pair."""
+        if self.requester_id == current_creator_id:
+            return self.receiver
+        return self.requester

@@ -41,6 +41,12 @@ class PortfolioItemResponse(PortfolioItemBase):
     is_pinned: bool = False
     pin_order: int = 0
     views_count: int = 0
+    
+    # Moderation & Approved Works Status
+    is_approved: bool = True
+    approval_status: str = "approved"
+    moderation_note: str | None = None
+
     created_at: datetime
     updated_at: datetime
 

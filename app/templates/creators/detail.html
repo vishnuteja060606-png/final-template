@@ -32,6 +32,8 @@
                     {% endif %}
                     {% if creator.status == 'draft' %}
                     <span class="badge bg-warning-subtle text-warning border border-warning-subtle"><i class="bi bi-eye-slash me-1"></i>Draft Profile (&lt; 2 Works)</span>
+                    {% else %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle"><i class="bi bi-check2-circle me-1"></i>Published</span>
                     {% endif %}
                 </div>
                 
@@ -131,7 +133,7 @@
                     {% set specs = creator.specifications_dict() %}
                     <div class="mb-3">
                         <label class="small text-muted fw-bold text-uppercase d-block mb-1">Production Capabilities</label>
-                        <div class="d-flex flex-column gap-1 small">
+                        <div class="d-flex flex-column gap-2 small">
                             <div><i class="bi bi-display me-2 text-primary"></i><strong>Max Resolution:</strong> {{ specs.get('resolution', '4K Ultra HD (3840x2160)') }}</div>
                             <div><i class="bi bi-speedometer2 me-2 text-primary"></i><strong>Framerate:</strong> {{ specs.get('max_fps', '60 FPS Smooth Interpolation') }}</div>
                             <div><i class="bi bi-aspect-ratio me-2 text-primary"></i><strong>Aspect Ratios:</strong> {{ specs.get('aspect_ratios', '9:16 Vertical, 16:9 Cinema, 1:1 Square') }}</div>
@@ -159,6 +161,8 @@
                         <div class="d-flex flex-wrap gap-1">
                             {% for skill in creator.skills_list() %}
                             <span class="badge bg-secondary-subtle text-secondary p-2">{{ skill }}</span>
+                            {% else %}
+                            <span class="text-muted small">No skills listed.</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -186,9 +190,9 @@
             {% endif %}
         </div>
 
-        <!-- Right Column: Pinned Works, Full Portfolio & Company Reviews -->
+        <!-- Right Column: Pinned Works, Full Portfolio, Reviews & Connections -->
         <div class="col-lg-8">
-            <!-- Pinned Works Section (Reviewer Request: Creator should able pin their best work) -->
+            <!-- Pinned Works Section (Reviewer Request: Creator should able pin their best work, max 3) -->
             {% set pinned_items = creator.pinned_portfolio_items %}
             {% if pinned_items %}
             <div class="mb-5">
@@ -196,29 +200,34 @@
                     <h4 class="fw-bold mb-0 text-dark">
                         <i class="bi bi-pin-angle-fill text-warning me-2"></i>Pinned Best Work
                     </h4>
-                    <span class="badge bg-warning-subtle text-warning border border-warning-subtle px-3 py-2">
-                        ⭐ Highlighted by Creator
+                    <span class="badge bg-warning text-dark border border-warning shadow-sm px-3 py-2 fw-bold" style="background: linear-gradient(135deg, #ffd700, #ffae00) !important;">
+                        ⭐ Featured Highlights ({{ pinned_items|length }}/3)
                     </span>
                 </div>
                 <div class="row g-3">
                     {% for item in pinned_items %}
                     <div class="col-md-6">
                         <div class="card h-100 border-warning border-2 shadow-sm rounded-4 overflow-hidden position-relative">
-                            <span class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark shadow-sm">
-                                <i class="bi bi-star-fill me-1"></i>Featured
-                            </span>
-                            <div class="ratio ratio-16x9 bg-dark">
+                            <!-- Golden star ribbon -->
+                            <div class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark shadow-sm fw-bold px-2 py-1" style="z-index: 2; background: linear-gradient(135deg, #ffd700, #ffae00) !important;">
+                                <i class="bi bi-star-fill text-dark me-1"></i>Pinned #{{ loop.index }}
+                            </div>
+                            <div class="ratio ratio-16x9 bg-dark cursor-pointer position-relative"
+                                 onclick="trackAndOpenMediaModal({{ item.id }}, '{{ item.title }}', '{{ item.file_path }}', '{{ item.content_type }}', '{{ item.description|escape or '' }}', '{{ item.format or '' }}', '{{ item.aspect_ratio or '' }}', '{{ item.tools_models or '' }}', '{{ item.skills or '' }}')">
                                 {% if item.mime_type.startswith('video') %}
-                                <video controls class="w-100 h-100" style="object-fit: cover;">
+                                <video class="w-100 h-100" style="object-fit: cover;" muted>
                                     <source src="{{ item.file_path }}" type="{{ item.mime_type }}">
                                 </video>
+                                <div class="position-absolute top-50 start-50 translate-middle text-white fs-1 bg-dark bg-opacity-50 rounded-circle p-2">
+                                    <i class="bi bi-play-circle-fill"></i>
+                                </div>
                                 {% else %}
                                 <img src="{{ item.file_path }}" alt="{{ item.title }}" class="w-100 h-100" style="object-fit: cover;">
                                 {% endif %}
                             </div>
                             <div class="card-body p-3">
                                 <h6 class="fw-bold mb-1">{{ item.title }}</h6>
-                                <p class="text-muted small mb-2 text-truncate">{{ item.description }}</p>
+                                <p class="text-muted small mb-2 text-truncate">{{ item.description or 'Featured portfolio showcase' }}</p>
                                 <div class="d-flex flex-wrap gap-1">
                                     <span class="badge bg-primary-subtle text-primary">{{ item.content_type }}</span>
                                     {% if item.aspect_ratio %}<span class="badge bg-secondary-subtle text-secondary">{{ item.aspect_ratio }}</span>{% endif %}
@@ -251,9 +260,9 @@
                 <div class="row g-3">
                     {% for item in creator.portfolio_items %}
                     <div class="col-md-6">
-                        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden">
+                        <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden {% if item.is_pinned %}border-warning border-1{% endif %}">
                             <div class="ratio ratio-16x9 bg-dark position-relative cursor-pointer"
-                                 onclick="openMediaModal('{{ item.title }}', '{{ item.file_path }}', '{{ item.content_type }}', '{{ item.description or '' }}', '{{ item.format or '' }}', '{{ item.aspect_ratio or '' }}', '{{ item.tools_models or '' }}', '{{ item.skills or '' }}')">
+                                 onclick="trackAndOpenMediaModal({{ item.id }}, '{{ item.title }}', '{{ item.file_path }}', '{{ item.content_type }}', '{{ item.description|escape or '' }}', '{{ item.format or '' }}', '{{ item.aspect_ratio or '' }}', '{{ item.tools_models or '' }}', '{{ item.skills or '' }}')">
                                 {% if item.mime_type.startswith('video') %}
                                 <video class="w-100 h-100" style="object-fit: cover;">
                                     <source src="{{ item.file_path }}" type="{{ item.mime_type }}">
@@ -264,19 +273,20 @@
                                 {% else %}
                                 <img src="{{ item.file_path }}" alt="{{ item.title }}" class="w-100 h-100" style="object-fit: cover;">
                                 {% endif %}
+                                {% if item.is_pinned %}
+                                <span class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark"><i class="bi bi-star-fill me-1"></i>Pinned</span>
+                                {% endif %}
                             </div>
                             <div class="card-body p-3">
                                 <div class="d-flex justify-content-between align-items-start mb-1">
                                     <h6 class="fw-bold mb-0 text-truncate">{{ item.title }}</h6>
-                                    {% if item.is_pinned %}
-                                    <span class="badge bg-warning text-dark"><i class="bi bi-star-fill"></i></span>
-                                    {% endif %}
                                 </div>
                                 <p class="text-secondary small mb-2 text-truncate">{{ item.description or 'No description.' }}</p>
                                 <div class="d-flex flex-wrap gap-1">
                                     <span class="badge bg-primary-subtle text-primary">{{ item.content_type }}</span>
                                     {% if item.aspect_ratio %}<span class="badge bg-secondary-subtle text-secondary">{{ item.aspect_ratio }}</span>{% endif %}
                                     {% if item.format %}<span class="badge bg-light text-dark border">{{ item.format }}</span>{% endif %}
+                                    <span class="badge bg-light text-dark border"><i class="bi bi-eye me-1"></i>{{ item.views_count }} views</span>
                                 </div>
                             </div>
                         </div>
@@ -284,6 +294,62 @@
                     {% endfor %}
                 </div>
                 {% endif %}
+            </div>
+
+            <!-- Creator Collaborative Network / Connections Section (Reviewer Requirement) -->
+            <div class="mb-5">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fw-bold mb-0 text-dark">
+                                <i class="bi bi-people-fill text-info me-2"></i>Creator Connections Network
+                            </h4>
+                            <p class="text-muted small mb-0">Collaborative professional network of verified AI creators</p>
+                        </div>
+                        <span class="badge bg-info-subtle text-info border border-info-subtle px-3 py-2 fw-bold">
+                            {{ connections_summary.total_connections }} Connected Creators
+                        </span>
+                    </div>
+                    <div class="card-body p-4">
+                        {% if not connections_summary.connections %}
+                        <div class="text-center py-4 text-muted">
+                            <i class="bi bi-person-lines-fill fs-2 mb-2 d-block"></i>
+                            <p class="mb-0">No public connections established yet.</p>
+                            {% if current_user and current_user.role == 'creator' and current_user.creator_profile and current_user.creator_profile.id != creator.id %}
+                            <button class="btn btn-outline-primary btn-sm mt-3" onclick="sendConnectionRequest({{ creator.id }})">
+                                <i class="bi bi-person-plus-fill me-1"></i>Connect with {{ creator.display_name }}
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="row g-3">
+                            {% for conn in connections_summary.connections %}
+                            {% set other_id = conn.receiver_id if conn.requester_id == creator.id else conn.requester_id %}
+                            {% set other_name = conn.receiver_name if conn.requester_id == creator.id else conn.requester_name %}
+                            {% set other_avatar = conn.receiver_avatar if conn.requester_id == creator.id else conn.requester_avatar %}
+                            {% set other_spec = conn.receiver_specialization if conn.requester_id == creator.id else conn.requester_specialization %}
+                            <div class="col-md-6">
+                                <div class="p-3 border rounded-3 bg-light d-flex align-items-center justify-content-between h-100">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <img src="{{ other_avatar or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" 
+                                             class="rounded-circle border" 
+                                             style="width: 44px; height: 44px; object-fit: cover;" 
+                                             alt="{{ other_name }}">
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ other_name }}</div>
+                                            <span class="badge bg-secondary-subtle text-secondary small">{{ other_spec or 'AI Creator' }}</span>
+                                        </div>
+                                    </div>
+                                    <a href="/creators/{{ other_id }}" class="btn btn-outline-primary btn-sm px-3">
+                                        View
+                                    </a>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
 
             <!-- Company Reviews Section (Reviewer Request: Company to give Reviews for creators) -->
@@ -399,30 +465,155 @@
     </div>
 </div>
 
-<!-- Modal: Direct Engagement / Contact -->
+<!-- Modal: Direct Engagement & Price Bid -->
 <div class="modal fade" id="engageCreatorModal" tabindex="-1" aria-labelledby="engageModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-bottom">
-                <h5 class="modal-title fw-bold" id="engageModalLabel">Engage {{ creator.display_name }}</h5>
+                <h5 class="modal-title fw-bold" id="engageModalLabel">Engage & Price Bid: {{ creator.display_name }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body p-4 text-center">
-                <i class="bi bi-send-check text-primary fs-1 mb-2"></i>
-                <h5 class="fw-bold">Ready to Start a Production?</h5>
-                <p class="text-secondary small">
-                    Creator base rate is <strong data-inr="{{ creator.hourly_rate_inr }}">₹{{ creator.hourly_rate_inr }}</strong>.
-                    Connect directly to discuss project requirements, deliverables, commercial buyout rights, and timeline.
-                </p>
-                <div class="alert alert-info py-2 small">
-                    <i class="bi bi-shield-lock me-1"></i>All engagements include commercial rights assignment and structured generation milestone tracking.
+            {% if current_user and current_user.role in ['company', 'agency', 'admin'] %}
+            <form onsubmit="handleSendEngagement(event, {{ creator.id }})">
+                <div class="modal-body p-4">
+                    <div class="alert alert-primary py-2 small mb-3">
+                        <i class="bi bi-cash-coin me-1"></i>Creator Base Rate: <strong data-inr="{{ creator.hourly_rate_inr }}">₹{{ creator.hourly_rate_inr }}/hr</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Your Price Bid (INR ₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="engageBidInr" required min="500" step="100" value="{{ (creator.hourly_rate_inr or 1500) * 10 }}" placeholder="e.g. 25000">
+                        </div>
+                        <div class="form-text">Proposed project price in INR for this engagement.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Proposal Message & Scope <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="engageMessage" rows="3" required placeholder="Detail the campaign objectives, deliverables, timeline, and commercial rights..."></textarea>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="engageBuyoutCheck" checked>
+                        <label class="form-check-label small text-muted" for="engageBuyoutCheck">
+                            Include full commercial buyout and generative copyright transfer
+                        </label>
+                    </div>
                 </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="sendEngagementBtn" class="btn btn-primary px-4">
+                        <i class="bi bi-send-fill me-1"></i>Submit Bid & Proposal
+                    </button>
+                </div>
+            </form>
+            {% else %}
+            <div class="modal-body p-4 text-center">
+                <i class="bi bi-shield-lock text-primary fs-1 mb-2"></i>
+                <h5 class="fw-bold">Sign In as a Brand / Company</h5>
+                <p class="text-secondary small mb-3">
+                    To send price bids, negotiate terms, and hire verified creators, please log in with a brand or agency account.
+                </p>
+                <a href="/login" class="btn btn-primary px-4">Log In to Submit Bid</a>
             </div>
-            <div class="modal-footer border-top">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                <a href="/projects" class="btn btn-primary">Link to an Active Brief</a>
-            </div>
+            {% endif %}
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function trackAndOpenMediaModal(itemId, title, filePath, contentType, description, format, aspectRatio, tools, skills) {
+    // Increment portfolio view count with session de-duplication
+    try {
+        fetch(`/api/creators/portfolio/${itemId}/view`, { method: 'POST' });
+    } catch (e) {}
+    openMediaModal(title, filePath, contentType, description, format, aspectRatio, tools, skills);
+}
+
+async function handleSendEngagement(event, creatorId) {
+    event.preventDefault();
+    const btn = document.getElementById('sendEngagementBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Submitting...';
+
+    const bidInr = parseInt(document.getElementById('engageBidInr').value);
+    const message = document.getElementById('engageMessage').value.trim();
+
+    try {
+        const res = await fetch('/api/engagements', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                creator_id: creatorId,
+                message: message,
+                bid_amount_inr: bidInr,
+                proposed_budget: `₹${bidInr.toLocaleString('en-IN')}`
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Price bid and proposal submitted to creator!', 'success');
+            setTimeout(() => window.location.href = '/dashboard/company', 1000);
+        } else {
+            showToast(data.detail || 'Failed to submit engagement.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>Submit Bid & Proposal';
+        }
+    } catch (e) {
+        showToast('Error submitting proposal.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-send-fill me-1"></i>Submit Bid & Proposal';
+    }
+}
+
+async function sendConnectionRequest(targetCreatorId) {
+    try {
+        const res = await fetch(`/api/creators/${targetCreatorId}/connect`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Connection request sent!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(data.detail || 'Failed to send connection request.', 'warning');
+        }
+    } catch (e) {
+        showToast('Error connecting.', 'danger');
+    }
+}
+
+async function submitCompanyReview(creatorId, event) {
+    event.preventDefault();
+    const rating = parseInt(document.getElementById('reviewRatingInput').value);
+    const title = document.getElementById('reviewTitleInput').value.trim();
+    const comment = document.getElementById('reviewCommentInput').value.trim();
+    const tools = document.getElementById('reviewToolsInput').value.trim();
+    const isVerified = document.getElementById('reviewVerifiedCheck').checked;
+
+    try {
+        const res = await fetch(`/api/creators/${creatorId}/reviews`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                rating: rating,
+                project_title: title,
+                comment: comment,
+                tools_used: tools || null,
+                is_verified_engagement: isVerified
+            })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast('Official review submitted successfully!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(data.detail || 'Failed to submit review.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error submitting review.', 'danger');
+    }
+}
+</script>
 {% endblock %}

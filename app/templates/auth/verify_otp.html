@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Two-Step Verification — Synapse{% endblock %}
+
+{% block content %}
+<div class="container py-5 my-md-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card border-0 shadow-lg rounded-4 p-4 p-md-5">
+                <div class="text-center mb-4">
+                    <div class="badge bg-primary-subtle text-primary p-3 rounded-circle fs-3 mb-3">
+                        <i class="bi bi-shield-lock-fill"></i>
+                    </div>
+                    <h3 class="fw-bold text-dark mb-1">Two-Step Verification</h3>
+                    <p class="text-secondary small mb-0">
+                        Enter the 6-digit security code sent to your registered email address.
+                    </p>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label small fw-semibold text-muted">Account Email</label>
+                    <input type="email" id="otpEmail" class="form-control form-control-lg bg-light" placeholder="name@example.com" value="{{ email or '' }}">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-semibold text-muted d-block text-center mb-2">6-Digit Verification Code</label>
+                    <div class="d-flex justify-content-center gap-2" id="otpInputs">
+                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;" autofocus>
+                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
+                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
+                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
+                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
+                        <input type="text" maxlength="1" class="form-control text-center fw-bold fs-4 otp-digit" style="width: 48px; height: 56px;">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary btn-lg w-100 fw-semibold mb-3 shadow" id="btnVerifyOtp" onclick="submit2FAVerification()">
+                    <i class="bi bi-check2-circle me-1"></i> Verify & Authenticate
+                </button>
+
+                <div class="d-flex justify-content-between align-items-center small text-muted">
+                    <button class="btn btn-link btn-sm text-decoration-none p-0" id="btnResendOtp" onclick="resend2FACode()">
+                        <i class="bi bi-arrow-repeat me-1"></i> Resend Code
+                    </button>
+                    <a href="/login" class="text-secondary text-decoration-none">Back to Password Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+// Auto-focus advance for 6-digit boxes
+const inputs = document.querySelectorAll('.otp-digit');
+inputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+        if (e.target.value.length === 1 && index < inputs.length - 1) {
+            inputs[index + 1].focus();
+        }
+    });
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+            inputs[index - 1].focus();
+        }
+    });
+});
+
+function getOtpCode() {
+    return Array.from(inputs).map(inp => inp.value.trim()).join('');
+}
+
+async function submit2FAVerification() {
+    const email = document.getElementById('otpEmail').value.trim();
+    const code = getOtpCode();
+
+    if (!email) {
+        showToast('Please enter your account email.', 'danger');
+        return;
+    }
+    if (code.length !== 6) {
+        showToast('Please enter all 6 digits of your verification code.', 'danger');
+        return;
+    }
+
+    const btn = document.getElementById('btnVerifyOtp');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Verifying...';
+
+    try {
+        const res = await fetch('/api/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+            showToast(data.detail || 'Verification failed. Please check the code.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify & Authenticate';
+            return;
+        }
+
+        if (data.access_token) {
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('user_role', data.role);
+            localStorage.setItem('user_id', data.user_id);
+            if (data.profile_id) localStorage.setItem('profile_id', data.profile_id);
+        }
+
+        showToast('Verification successful! Logging in...', 'success');
+        setTimeout(() => {
+            if (data.role === 'creator') {
+                window.location.href = '/dashboard/creator';
+            } else {
+                window.location.href = '/dashboard/company';
+            }
+        }, 800);
+    } catch (err) {
+        showToast('Error verifying code. Please try again.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-check2-circle me-1"></i> Verify & Authenticate';
+    }
+}
+
+async function resend2FACode() {
+    const email = document.getElementById('otpEmail').value.trim();
+    if (!email) {
+        showToast('Please enter your account email to resend code.', 'danger');
+        return;
+    }
+
+    const resendBtn = document.getElementById('btnResendOtp');
+    resendBtn.disabled = true;
+    resendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+    try {
+        const res = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showToast(data.message || 'New 6-digit code sent to your email.', 'success');
+        } else {
+            showToast(data.detail || 'Could not send verification code.', 'danger');
+        }
+    } catch (err) {
+        showToast('Network error sending code.', 'danger');
+    } finally {
+        resendBtn.disabled = false;
+        resendBtn.innerHTML = '<i class="bi bi-arrow-repeat me-1"></i> Resend Code';
+    }
+}
+</script>
+{% endblock %}

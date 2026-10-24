@@ -1,3 +1,6 @@
+import secrets
+import random
+import logging
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
 import bcrypt
@@ -10,9 +13,52 @@ from app.config import settings
 from app.db.database import get_db
 from app.models.user import User
 
+logger = logging.getLogger(__name__)
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=False)
 
 class AuthService:
+    # In-memory OTP storage for Two-Factor Email Authentication
+    _otp_cache: dict[str, dict] = {}
+
+    @classmethod
+    def generate_email_otp(cls, email: str, user_id: int | None = None) -> str:
+        """
+        Generates a secure 6-digit OTP for Two-Step Email Authentication.
+        Valid for 10 minutes.
+        """
+        code = f"{random.randint(100000, 999999)}"
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=10)
+        cls._otp_cache[email.lower().strip()] = {
+            "code": code,
+            "expires_at": expires_at,
+            "user_id": user_id
+        }
+        logger.info(f"[2FA EMAIL NOTIFICATION] Sent verification OTP {code} to {email}")
+        print(f"\n==================================================")
+        print(f"[2FA EMAIL DISPATCH]")
+        print(f"TO: {email}")
+        print(f"SUBJECT: Synapse Two-Step Verification Code")
+        print(f"YOUR 6-DIGIT CODE IS: {code}")
+        print(f"VALIDITY: 10 Minutes")
+        print(f"==================================================\n")
+        return code
+
+    @classmethod
+    def verify_email_otp(cls, email: str, code: str) -> bool:
+        """Validates the 6-digit OTP code."""
+        email_clean = email.lower().strip()
+        record = cls._otp_cache.get(email_clean)
+        if not record:
+            return False
+        if datetime.now(timezone.utc) > record["expires_at"]:
+            cls._otp_cache.pop(email_clean, None)
+            return False
+        if record["code"] == code.strip():
+            cls._otp_cache.pop(email_clean, None)
+            return True
+        return False
+
     @staticmethod
     def hash_password(password: str) -> str:
         salt = bcrypt.gensalt()

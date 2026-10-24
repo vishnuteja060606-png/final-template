@@ -74,7 +74,7 @@
             <div class="card p-3 border-0 shadow-sm rounded-4 h-100">
                 <div class="small fw-bold text-muted text-uppercase mb-1"><i class="bi bi-eye text-primary me-1"></i>Profile Views</div>
                 <div class="fs-2 fw-bold text-dark mb-0">{{ profile.views_count }}</div>
-                <span class="text-secondary small">Total brand impressions</span>
+                <span class="text-secondary small">Session-tracked impressions</span>
             </div>
         </div>
 
@@ -111,7 +111,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-collection-play me-2 text-primary"></i>My Portfolio Works ({{ portfolio_items|length }})</h4>
-                <p class="text-muted small mb-0">Pin up to 3 best works to highlight them at the top of your public profile</p>
+                <p class="text-muted small mb-0">Pin up to 3 best works to highlight them with a golden star ribbon at the top of your public profile</p>
             </div>
             <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#uploadModal">
                 <i class="bi bi-plus-lg me-1"></i> Add Work
@@ -133,8 +133,8 @@
                         {% endif %}
                         <span class="position-absolute top-0 start-0 m-2 badge bg-dark bg-opacity-75">{{ item.content_type }}</span>
                         {% if item.is_pinned %}
-                        <span class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark fw-bold">
-                            <i class="bi bi-star-fill me-1"></i>Pinned
+                        <span class="position-absolute top-0 end-0 m-2 badge bg-warning text-dark fw-bold shadow-sm" style="background: linear-gradient(135deg, #ffd700, #ffae00) !important;">
+                            <i class="bi bi-star-fill me-1"></i>Pinned #{{ item.pin_order or loop.index }}
                         </span>
                         {% endif %}
                     </div>
@@ -142,14 +142,24 @@
                     <h6 class="fw-bold mb-1 text-dark">{{ item.title }}</h6>
                     <p class="small text-secondary mb-2 flex-grow-1">{{ item.description[:70] if item.description else 'No description' }}...</p>
                     
-                    <div class="d-flex flex-wrap gap-1 mb-3">
+                    <div class="d-flex flex-wrap gap-1 mb-2">
+                        {% if item.approval_status == 'approved' %}
+                        <span class="badge bg-success-subtle text-success border border-success-subtle small"><i class="bi bi-shield-check me-1"></i>Approved Work</span>
+                        {% elif item.approval_status == 'pending' %}
+                        <span class="badge bg-warning-subtle text-warning border border-warning-subtle small"><i class="bi bi-clock-history me-1"></i>Pending Review</span>
+                        {% elif item.approval_status == 'rejected' %}
+                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle small"><i class="bi bi-x-circle me-1"></i>Rejected</span>
+                        {% endif %}
                         {% if item.aspect_ratio %}<span class="badge bg-secondary-subtle text-secondary small">{{ item.aspect_ratio }}</span>{% endif %}
                         {% if item.format %}<span class="badge bg-light text-dark border small">{{ item.format }}</span>{% endif %}
                         <span class="badge bg-light text-muted border small"><i class="bi bi-eye me-1"></i>{{ item.views_count }} views</span>
                     </div>
+                    {% if item.moderation_note %}
+                    <div class="small text-muted fst-italic mb-2 bg-light p-1 rounded">Note: {{ item.moderation_note }}</div>
+                    {% endif %}
 
                     <div class="pt-2 border-top d-flex justify-content-between align-items-center mt-auto">
-                        <!-- Pin / Unpin Button (Reviewer Feature) -->
+                        <!-- Pin / Unpin Button (Reviewer Feature, Max 3) -->
                         {% if item.is_pinned %}
                         <button class="btn btn-sm btn-warning text-dark fw-bold" onclick="togglePinWork({{ item.id }}, false)" title="Unpin from top">
                             <i class="bi bi-star-fill me-1"></i>Pinned
@@ -161,7 +171,7 @@
                         {% endif %}
 
                         <div class="d-flex gap-1">
-                            <button class="btn btn-sm btn-outline-primary" onclick="openMediaModal('{{ item.title }}', '{{ item.file_path }}', '{{ item.content_type }}', '{{ item.description|escape }}', '{{ item.format }}', '{{ item.aspect_ratio }}', '{{ item.tools_models }}', '{{ item.skills }}')">
+                            <button class="btn btn-sm btn-outline-primary" onclick="openMediaModal('{{ item.title }}', '{{ item.file_path }}', '{{ item.content_type }}', '{{ item.description|escape or '' }}', '{{ item.format or '' }}', '{{ item.aspect_ratio or '' }}', '{{ item.tools_models or '' }}', '{{ item.skills or '' }}')">
                                 Preview
                             </button>
                             <button class="btn btn-sm btn-outline-danger" onclick="deletePortfolioItem({{ item.id }})">
@@ -185,20 +195,92 @@
         {% endif %}
     </div>
 
-    <!-- Creator Connections Section (Reviewer Feature) -->
+    <!-- Creator Connections & Mutual Networking Section (Reviewer Feature) -->
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <h4 class="fw-bold mb-3 text-dark"><i class="bi bi-people-fill text-info me-2"></i>Creator Connections Network</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-people-fill text-info me-2"></i>Creator Connections Network</h4>
+                <p class="text-muted small mb-0">Manage mutual connections and incoming requests with fellow AI creators</p>
+            </div>
+            <a href="/creators" class="btn btn-outline-info btn-sm">
+                <i class="bi bi-person-plus me-1"></i> Discover Creators
+            </a>
+        </div>
+
+        <!-- Pending Incoming Connection Requests -->
+        {% if profile.pending_incoming_connections %}
+        <div class="alert alert-info border-info border-1 rounded-4 p-3 mb-4">
+            <h6 class="fw-bold mb-3 text-dark"><i class="bi bi-bell-fill text-primary me-2"></i>Pending Incoming Requests ({{ profile.pending_incoming_connections|length }})</h6>
+            <div class="row g-3">
+                {% for conn in profile.pending_incoming_connections %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="p-3 bg-white rounded-3 shadow-sm border d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="{{ conn.requester.profile_image_url or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" 
+                                 class="rounded-circle border" 
+                                 style="width: 40px; height: 40px; object-fit: cover;" 
+                                 alt="{{ conn.requester.display_name }}">
+                            <div>
+                                <div class="fw-bold text-dark">{{ conn.requester.display_name }}</div>
+                                <span class="badge bg-secondary-subtle text-secondary small">{{ conn.requester.specialization or 'AI Creator' }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex gap-1">
+                            <button class="btn btn-sm btn-success" onclick="respondToConnection({{ conn.id }}, 'accept')" title="Accept Connection">
+                                <i class="bi bi-check-lg"></i> Accept
+                            </button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="respondToConnection({{ conn.id }}, 'reject')" title="Decline Connection">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Pending Outgoing Requests -->
+        {% if profile.pending_outgoing_connections %}
+        <div class="mb-3">
+            <span class="small fw-bold text-secondary text-uppercase d-block mb-2">Outgoing Requests Pending Acceptance</span>
+            <div class="row g-2">
+                {% for conn in profile.pending_outgoing_connections %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="p-2 border rounded-3 bg-light d-flex align-items-center justify-content-between small">
+                        <div>
+                            <span class="fw-semibold text-dark">{{ conn.receiver.display_name }}</span>
+                            <span class="badge bg-warning-subtle text-warning ms-1">Pending</span>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm py-0 px-2" onclick="respondToConnection({{ conn.id }}, 'reject')" title="Cancel Request">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Accepted Active Connections -->
         {% if connections_summary.connections %}
         <div class="row g-3">
             {% for conn in connections_summary.connections %}
             {% set other_id = conn.receiver_id if conn.requester_id == profile.id else conn.requester_id %}
             {% set other_name = conn.receiver_name if conn.requester_id == profile.id else conn.requester_name %}
+            {% set other_avatar = conn.receiver_avatar if conn.requester_id == profile.id else conn.requester_avatar %}
             {% set other_spec = conn.receiver_specialization if conn.requester_id == profile.id else conn.requester_specialization %}
             <div class="col-md-6 col-lg-4">
                 <div class="p-3 border rounded-3 bg-light d-flex align-items-center justify-content-between">
-                    <div>
-                        <div class="fw-bold text-dark">{{ other_name }}</div>
-                        <span class="badge bg-secondary-subtle text-secondary small">{{ other_spec or 'AI Creator' }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <img src="{{ other_avatar or 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100' }}" 
+                             class="rounded-circle border" 
+                             style="width: 40px; height: 40px; object-fit: cover;" 
+                             alt="{{ other_name }}">
+                        <div>
+                            <div class="fw-bold text-dark">{{ other_name }}</div>
+                            <span class="badge bg-secondary-subtle text-secondary small">{{ other_spec or 'AI Creator' }}</span>
+                        </div>
                     </div>
                     <a href="/creators/{{ other_id }}" class="btn btn-outline-primary btn-sm">View Profile</a>
                 </div>
@@ -206,10 +288,13 @@
             {% endfor %}
         </div>
         {% else %}
+        {% if not profile.pending_incoming_connections and not profile.pending_outgoing_connections %}
         <div class="text-center py-4 text-muted">
             <i class="bi bi-person-plus fs-3 mb-2 d-block"></i>
-            <p class="small mb-0">No active creator connections yet. Explore creative portfolios to connect with other AI artists!</p>
+            <p class="small mb-2">No active creator connections yet. Explore creative portfolios to connect with other AI artists!</p>
+            <a href="/creators" class="btn btn-outline-primary btn-sm">Browse Creators Directory</a>
         </div>
+        {% endif %}
         {% endif %}
     </div>
 
@@ -263,7 +348,13 @@
 
     <!-- Inbound Brand Proposals Section -->
     <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
-        <h4 class="fw-bold mb-3 text-dark"><i class="bi bi-inbox me-2 text-primary"></i>Inbound Brand Proposals</h4>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0 text-dark"><i class="bi bi-inbox me-2 text-primary"></i>Inbound Brand Proposals & Price Bids</h4>
+                <p class="text-secondary small mb-0">Review incoming company proposals, negotiate price bids in INR, or accept project terms.</p>
+            </div>
+            <span class="badge bg-primary px-3 py-2">{{ engagements|length }} Inbound Deals</span>
+        </div>
         {% if engagements %}
         <div class="table-responsive">
             <table class="table align-middle">
@@ -271,7 +362,7 @@
                     <tr class="text-secondary small">
                         <th>Brand / Company</th>
                         <th>Project Proposal</th>
-                        <th>Proposed Budget</th>
+                        <th>Price Bid & Negotiation</th>
                         <th>Status</th>
                         <th>Date</th>
                         <th class="text-end">Action</th>
@@ -282,17 +373,32 @@
                     <tr>
                         <td>
                             <strong class="text-dark">{{ eng.company.company_name if eng.company else 'Brand' }}</strong>
+                            <div class="small text-muted">{{ eng.company.industry or 'Brand & Agency' }}</div>
                         </td>
                         <td>
-                            <p class="small text-secondary mb-0" style="max-width: 320px;">{{ eng.message }}</p>
+                            <p class="small text-secondary mb-1" style="max-width: 260px;">{{ eng.message }}</p>
                             {% if eng.job %}
-                            <a href="/projects/{{ eng.job_id }}" class="badge bg-light text-primary border text-decoration-none mt-1">
-                                Linked Brief: {{ eng.job.title }}
+                            <a href="/projects/{{ eng.job_id }}" class="badge bg-light text-primary border text-decoration-none">
+                                <i class="bi bi-link-45deg me-1"></i>Linked Brief: {{ eng.job.title }}
                             </a>
                             {% endif %}
                         </td>
                         <td>
-                            <span class="badge bg-success-subtle text-success">{{ eng.proposed_budget or 'Negotiable' }}</span>
+                            <div class="fw-bold text-success" data-inr="{{ eng.bid_amount_inr or eng.active_price_inr }}">
+                                Initial Bid: ₹{{ eng.bid_amount_inr or eng.active_price_inr }}
+                            </div>
+                            {% if eng.counter_offer_inr %}
+                            <div class="small fw-semibold text-primary">
+                                Counter: ₹{{ eng.counter_offer_inr }}
+                                <span class="badge bg-secondary-subtle text-secondary" style="font-size: 0.65rem;">by {{ eng.last_negotiated_by }}</span>
+                            </div>
+                            {% endif %}
+                            {% if eng.negotiation_notes %}
+                            <div class="small text-muted fst-italic mt-1" style="max-width: 200px;">"{{ eng.negotiation_notes }}"</div>
+                            {% endif %}
+                            <span class="badge bg-light text-dark border small mt-1">
+                                <i class="bi bi-tag me-1"></i>{{ eng.negotiation_status or 'initial_bid' }}
+                            </span>
                         </td>
                         <td>
                             <span class="badge {% if eng.status == 'accepted' %}bg-success{% elif eng.status == 'declined' %}bg-danger{% else %}bg-warning text-dark{% endif %} text-uppercase">
@@ -302,8 +408,21 @@
                         <td class="small text-muted">{{ eng.created_at.strftime('%b %d') }}</td>
                         <td class="text-end">
                             {% if eng.status == 'pending' %}
-                            <button class="btn btn-sm btn-outline-success me-1" onclick="updateEngagementStatus({{ eng.id }}, 'accepted')">Accept</button>
-                            <button class="btn btn-sm btn-outline-danger" onclick="updateEngagementStatus({{ eng.id }}, 'declined')">Decline</button>
+                            <div class="d-flex flex-column gap-1 align-items-end" style="min-width: 140px;">
+                                <button class="btn btn-sm btn-success w-100" onclick="handleAcceptBid({{ eng.id }})">
+                                    <i class="bi bi-check-lg me-1"></i>Accept ₹{{ eng.active_price_inr }}
+                                </button>
+                                <button class="btn btn-sm btn-outline-primary w-100" onclick="openNegotiateModal({{ eng.id }}, '{{ eng.company.company_name if eng.company else 'Brand' }}', {{ eng.active_price_inr }})">
+                                    <i class="bi bi-arrow-left-right me-1"></i>Counter-Offer
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger w-100" onclick="updateEngagementStatus({{ eng.id }}, 'declined')">
+                                    Decline
+                                </button>
+                            </div>
+                            {% elif eng.status == 'accepted' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle p-2">
+                                <i class="bi bi-check2-all me-1"></i>Agreed at ₹{{ eng.active_price_inr }}
+                            </span>
                             {% else %}
                             <span class="small text-muted">Completed</span>
                             {% endif %}
@@ -404,17 +523,22 @@
     </div>
 </div>
 
-<!-- Edit Profile Modal -->
+<!-- Edit Profile Modal with Full AI Specs & Socials -->
+{% set cur_specs = profile.specifications_dict() %}
+{% set cur_social = profile.social_links_dict() %}
 <div class="modal fade" id="editProfileModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Edit Creator Profile & Specifications</h5>
+                <h5 class="modal-title fw-bold">Edit Creator Profile & Technical Specifications</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editProfileForm" onsubmit="handleProfileUpdate(event)">
                 <div class="modal-body p-4">
                     <div class="row g-3">
+                        <div class="col-12">
+                            <span class="small fw-bold text-primary text-uppercase">1. Basic Profile Information</span>
+                        </div>
                         <div class="col-md-6">
                             <label class="form-label small fw-semibold">Display Name</label>
                             <input type="text" class="form-control" id="profDisplayName" value="{{ profile.display_name }}" required>
@@ -440,22 +564,117 @@
                             <textarea class="form-control" id="profBio" rows="3">{{ profile.bio or '' }}</textarea>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">AI Tools & Models</label>
+                            <label class="form-label small fw-semibold">AI Tools & Models (Comma-separated)</label>
                             <input type="text" class="form-control" id="profTools" value="{{ profile.tools_models or '' }}" placeholder="Runway Gen-3, Midjourney v6, Kling AI, ComfyUI">
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small fw-semibold">Skills</label>
+                            <label class="form-label small fw-semibold">Core Skills (Comma-separated)</label>
                             <input type="text" class="form-control" id="profSkills" value="{{ profile.skills or '' }}" placeholder="Prompt Engineering, Motion Design, LoRA Training">
                         </div>
                         <div class="col-12">
-                            <label class="form-label small fw-semibold">Generative Workflow & Specs</label>
+                            <label class="form-label small fw-semibold">Generative Workflow & Pipeline</label>
                             <textarea class="form-control" id="profWorkflow" rows="2" placeholder="Describe your technical specifications, render rig, resolutions (4K), and pipeline...">{{ profile.workflow or '' }}</textarea>
+                        </div>
+
+                        <!-- Technical Specifications Section -->
+                        <div class="col-12 pt-3 border-top">
+                            <span class="small fw-bold text-primary text-uppercase">2. Technical Production Specifications</span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Max Resolution</label>
+                            <input type="text" class="form-control" id="specResolution" value="{{ cur_specs.get('resolution', '4K Ultra HD (3840x2160)') }}" placeholder="e.g. 4K Ultra HD (3840x2160)">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Framerate / FPS</label>
+                            <input type="text" class="form-control" id="specMaxFps" value="{{ cur_specs.get('max_fps', '60 FPS Smooth Interpolation') }}" placeholder="e.g. 60 FPS Smooth Interpolation">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Supported Aspect Ratios</label>
+                            <input type="text" class="form-control" id="specAspectRatios" value="{{ cur_specs.get('aspect_ratios', '9:16 Vertical, 16:9 Cinema, 1:1 Square') }}" placeholder="e.g. 9:16 Vertical, 16:9 Cinema, 1:1 Square">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Average Turnaround</label>
+                            <input type="text" class="form-control" id="specTurnaround" value="{{ cur_specs.get('turnaround_days', '24 - 48 Hours') }}" placeholder="e.g. 24 - 48 Hours">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Hardware Rig</label>
+                            <input type="text" class="form-control" id="specHardware" value="{{ cur_specs.get('hardware', 'Local Dual RTX 4090 (48GB VRAM)') }}" placeholder="e.g. Local Dual RTX 4090 (48GB VRAM)">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">LoRA / Fine-Tuning Support</label>
+                            <input type="text" class="form-control" id="specLora" value="{{ cur_specs.get('lora_training', 'Custom LoRA Character & Style Training Supported') }}" placeholder="e.g. Custom LoRA Character & Style Training Supported">
+                        </div>
+
+                        <!-- Social Media Links Section -->
+                        <div class="col-12 pt-3 border-top">
+                            <span class="small fw-bold text-primary text-uppercase">3. Social Links & Portfolios</span>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Portfolio Website</label>
+                            <input type="url" class="form-control" id="socialWebsite" value="{{ cur_social.get('website', profile.website or '') }}" placeholder="https://">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Twitter / X</label>
+                            <input type="url" class="form-control" id="socialTwitter" value="{{ cur_social.get('twitter', '') }}" placeholder="https://x.com/username">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Instagram</label>
+                            <input type="url" class="form-control" id="socialInstagram" value="{{ cur_social.get('instagram', '') }}" placeholder="https://instagram.com/username">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">YouTube</label>
+                            <input type="url" class="form-control" id="socialYoutube" value="{{ cur_social.get('youtube', '') }}" placeholder="https://youtube.com/@channel">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">ArtStation</label>
+                            <input type="url" class="form-control" id="socialArtstation" value="{{ cur_social.get('artstation', '') }}" placeholder="https://artstation.com/artist">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">LinkedIn</label>
+                            <input type="url" class="form-control" id="socialLinkedin" value="{{ cur_social.get('linkedin', '') }}" placeholder="https://linkedin.com/in/username">
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" id="updateProfileBtn" class="btn btn-primary px-4">Save Profile</button>
+                    <button type="submit" id="updateProfileBtn" class="btn btn-primary px-4">Save Profile & Specs</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Counter-Offer / Price Negotiation -->
+<div class="modal fade" id="negotiateModal" tabindex="-1" aria-labelledby="negotiateModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold" id="negotiateModalLabel">Price Negotiation & Counter-Offer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="negotiateForm" onsubmit="submitCounterOffer(event)">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="negotiateEngagementId">
+                    <div class="alert alert-info py-2 small mb-3">
+                        Negotiating proposal with <strong id="negotiatePartnerName">Brand</strong>.<br>
+                        Current Active Price: <strong id="negotiateCurrentPrice">₹0</strong>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Your Counter-Offer (INR ₹) <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="negotiateAmountInr" required min="500" step="100" placeholder="e.g. 35000">
+                        </div>
+                        <div class="form-text">Specify your proposed price in Indian Rupees (INR).</div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Terms / Deliverables Notes</label>
+                        <textarea class="form-control" id="negotiateNotes" rows="3" placeholder="e.g. Can deliver in 48 hours in 4K resolution with 2 revisions included..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="submitCounterBtn" class="btn btn-primary px-4">Send Counter-Offer</button>
                 </div>
             </form>
         </div>
@@ -512,11 +731,72 @@ async function deletePortfolioItem(itemId) {
     }
 }
 
+async function togglePinWork(itemId, isPinned) {
+    try {
+        const res = await fetch(`/api/portfolio/${itemId}/pin`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_pinned: isPinned })
+        });
+        if (res.ok) {
+            showToast(isPinned ? 'Work pinned to top with golden star ribbon!' : 'Work unpinned.', 'success');
+            setTimeout(() => window.location.reload(), 600);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Failed to update pin status.', 'warning');
+        }
+    } catch (e) {
+        showToast('Error updating pin status.', 'danger');
+    }
+}
+
+async function respondToConnection(connId, action) {
+    try {
+        const res = await fetch(`/api/connections/${connId}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: action })
+        });
+        if (res.ok) {
+            showToast(`Connection ${action}ed!`, 'success');
+            setTimeout(() => window.location.reload(), 600);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Failed to update connection.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error updating connection.', 'danger');
+    }
+}
+
 async function handleProfileUpdate(event) {
     event.preventDefault();
     const btn = document.getElementById('updateProfileBtn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    const specs = {
+        resolution: document.getElementById('specResolution').value.trim(),
+        max_fps: document.getElementById('specMaxFps').value.trim(),
+        aspect_ratios: document.getElementById('specAspectRatios').value.trim(),
+        turnaround_days: document.getElementById('specTurnaround').value.trim(),
+        hardware: document.getElementById('specHardware').value.trim(),
+        lora_training: document.getElementById('specLora').value.trim()
+    };
+
+    const socials = {};
+    const website = document.getElementById('socialWebsite').value.trim();
+    if (website) socials.website = website;
+    const twitter = document.getElementById('socialTwitter').value.trim();
+    if (twitter) socials.twitter = twitter;
+    const instagram = document.getElementById('socialInstagram').value.trim();
+    if (instagram) socials.instagram = instagram;
+    const youtube = document.getElementById('socialYoutube').value.trim();
+    if (youtube) socials.youtube = youtube;
+    const artstation = document.getElementById('socialArtstation').value.trim();
+    if (artstation) socials.artstation = artstation;
+    const linkedin = document.getElementById('socialLinkedin').value.trim();
+    if (linkedin) socials.linkedin = linkedin;
 
     const payload = {
         display_name: document.getElementById('profDisplayName').value.trim(),
@@ -527,7 +807,9 @@ async function handleProfileUpdate(event) {
         skills: document.getElementById('profSkills').value.trim(),
         workflow: document.getElementById('profWorkflow').value.trim(),
         location: document.getElementById('profLocation').value.trim(),
-        hourly_rate_inr: parseInt(document.getElementById('profRateInr').value) || 1500
+        hourly_rate_inr: parseInt(document.getElementById('profRateInr').value) || 1500,
+        specifications: JSON.stringify(specs),
+        social_links: JSON.stringify(socials)
     };
 
     try {
@@ -537,17 +819,80 @@ async function handleProfileUpdate(event) {
             body: JSON.stringify(payload)
         });
         if (res.ok) {
-            showToast('Profile updated!', 'success');
+            showToast('Profile and technical specifications saved!', 'success');
             setTimeout(() => window.location.reload(), 800);
         } else {
             showToast('Failed to update profile.', 'danger');
             btn.disabled = false;
-            btn.innerHTML = 'Save Profile';
+            btn.innerHTML = 'Save Profile & Specs';
         }
     } catch (e) {
         showToast('Error updating profile.', 'danger');
         btn.disabled = false;
-        btn.innerHTML = 'Save Profile';
+        btn.innerHTML = 'Save Profile & Specs';
+    }
+}
+
+function openNegotiateModal(engagementId, companyName, currentPrice) {
+    document.getElementById('negotiateEngagementId').value = engagementId;
+    document.getElementById('negotiatePartnerName').textContent = companyName;
+    document.getElementById('negotiateCurrentPrice').textContent = '₹' + Number(currentPrice).toLocaleString('en-IN');
+    document.getElementById('negotiateAmountInr').value = currentPrice || 25000;
+    const modal = new bootstrap.Modal(document.getElementById('negotiateModal'));
+    modal.show();
+}
+
+async function handleAcceptBid(engagementId) {
+    if (!confirm('Accept this price bid and agree on engagement terms?')) return;
+    try {
+        const res = await fetch(`/api/engagements/${engagementId}/accept-bid`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            showToast('Price bid accepted! Deal is confirmed.', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Failed to accept bid.', 'danger');
+        }
+    } catch (e) {
+        showToast('Error accepting bid.', 'danger');
+    }
+}
+
+async function submitCounterOffer(event) {
+    event.preventDefault();
+    const btn = document.getElementById('submitCounterBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Sending...';
+
+    const engagementId = document.getElementById('negotiateEngagementId').value;
+    const amount = parseInt(document.getElementById('negotiateAmountInr').value);
+    const notes = document.getElementById('negotiateNotes').value.trim();
+
+    try {
+        const res = await fetch(`/api/engagements/${engagementId}/counter-offer`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                counter_offer_inr: amount,
+                notes: notes || null
+            })
+        });
+        if (res.ok) {
+            showToast('Counter-offer sent to brand!', 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            const data = await res.json();
+            showToast(data.detail || 'Failed to send counter-offer.', 'danger');
+            btn.disabled = false;
+            btn.innerHTML = 'Send Counter-Offer';
+        }
+    } catch (e) {
+        showToast('Error sending counter-offer.', 'danger');
+        btn.disabled = false;
+        btn.innerHTML = 'Send Counter-Offer';
     }
 }
 

@@ -2,13 +2,35 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.engagement import EngagementCreate, EngagementUpdate, EngagementResponse
+from app.schemas.engagement import EngagementCreate, EngagementUpdate, EngagementResponse, CounterOfferRequest
 from app.services.engagement_service import engagement_service
 from app.services.company_service import company_service
 from app.services.creator_service import creator_service
 from app.services.auth_service import get_current_user, require_role
 
 router = APIRouter(prefix="/api/engagements", tags=["Engagements & Selection"])
+
+def _to_response(engagement) -> EngagementResponse:
+    return EngagementResponse(
+        id=engagement.id,
+        company_id=engagement.company_id,
+        creator_id=engagement.creator_id,
+        job_id=engagement.job_id,
+        status=engagement.status,
+        message=engagement.message,
+        proposed_budget=engagement.proposed_budget,
+        bid_amount_inr=engagement.bid_amount_inr,
+        counter_offer_inr=engagement.counter_offer_inr,
+        negotiation_status=engagement.negotiation_status,
+        negotiation_notes=engagement.negotiation_notes,
+        last_negotiated_by=engagement.last_negotiated_by,
+        active_price_inr=engagement.active_price_inr,
+        created_at=engagement.created_at,
+        updated_at=engagement.updated_at,
+        company_name=engagement.company.company_name if engagement.company else None,
+        creator_name=engagement.creator.display_name if engagement.creator else None,
+        job_title=engagement.job.title if engagement.job else None
+    )
 
 @router.post("", response_model=EngagementResponse, status_code=status.HTTP_201_CREATED)
 def create_engagement(
@@ -23,20 +45,7 @@ def create_engagement(
             detail="Company profile must be set up before initiating engagements."
         )
     engagement = engagement_service.create_engagement(db, company.id, payload)
-    return EngagementResponse(
-        id=engagement.id,
-        company_id=engagement.company_id,
-        creator_id=engagement.creator_id,
-        job_id=engagement.job_id,
-        status=engagement.status,
-        message=engagement.message,
-        proposed_budget=engagement.proposed_budget,
-        created_at=engagement.created_at,
-        updated_at=engagement.updated_at,
-        company_name=company.company_name,
-        creator_name=engagement.creator.display_name if engagement.creator else None,
-        job_title=engagement.job.title if engagement.job else None
-    )
+    return _to_response(engagement)
 
 @router.get("/my", response_model=list[EngagementResponse])
 def get_my_engagements(
@@ -54,23 +63,7 @@ def get_my_engagements(
             return []
         engagements = engagement_service.list_for_company(db, company.id)
 
-    return [
-        EngagementResponse(
-            id=e.id,
-            company_id=e.company_id,
-            creator_id=e.creator_id,
-            job_id=e.job_id,
-            status=e.status,
-            message=e.message,
-            proposed_budget=e.proposed_budget,
-            created_at=e.created_at,
-            updated_at=e.updated_at,
-            company_name=e.company.company_name if e.company else None,
-            creator_name=e.creator.display_name if e.creator else None,
-            job_title=e.job.title if e.job else None
-        )
-        for e in engagements
-    ]
+    return [_to_response(e) for e in engagements]
 
 @router.put("/{engagement_id}/status", response_model=EngagementResponse)
 def update_engagement_status(
@@ -97,17 +90,29 @@ def update_engagement_status(
         )
 
     updated = engagement_service.update_status(db, engagement, payload.status)
-    return EngagementResponse(
-        id=updated.id,
-        company_id=updated.company_id,
-        creator_id=updated.creator_id,
-        job_id=updated.job_id,
-        status=updated.status,
-        message=updated.message,
-        proposed_budget=updated.proposed_budget,
-        created_at=updated.created_at,
-        updated_at=updated.updated_at,
-        company_name=updated.company.company_name if updated.company else None,
-        creator_name=updated.creator.display_name if updated.creator else None,
-        job_title=updated.job.title if updated.job else None
-    )
+    return _to_response(updated)
+
+@router.post("/{engagement_id}/counter-offer", response_model=EngagementResponse)
+def submit_counter_offer(
+    engagement_id: int,
+    payload: CounterOfferRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Price Negotiation: Submit a negotiated price counter-offer with terms in INR.
+    """
+    updated = engagement_service.submit_counter_offer(db, engagement_id, current_user, payload)
+    return _to_response(updated)
+
+@router.post("/{engagement_id}/accept-bid", response_model=EngagementResponse)
+def accept_negotiated_bid(
+    engagement_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Accept the current price bid / counter-offer and agree on engagement terms.
+    """
+    updated = engagement_service.accept_bid(db, engagement_id, current_user)
+    return _to_response(updated)

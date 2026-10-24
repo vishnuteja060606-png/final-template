@@ -9,6 +9,30 @@ from app.schemas.connection import ConnectionResponse, CreatorConnectionsSummary
 logger = logging.getLogger(__name__)
 
 class ConnectionService:
+    def _to_response(self, c: CreatorConnection) -> ConnectionResponse:
+        req_name = c.requester.display_name if c.requester else "Creator"
+        req_avatar = c.requester.profile_image_url if c.requester else None
+        req_spec = c.requester.specialization if c.requester else None
+
+        rec_name = c.receiver.display_name if c.receiver else "Creator"
+        rec_avatar = c.receiver.profile_image_url if c.receiver else None
+        rec_spec = c.receiver.specialization if c.receiver else None
+
+        return ConnectionResponse(
+            id=c.id,
+            requester_id=c.requester_id,
+            requester_name=req_name,
+            requester_avatar=req_avatar,
+            requester_specialization=req_spec,
+            receiver_id=c.receiver_id,
+            receiver_name=rec_name,
+            receiver_avatar=rec_avatar,
+            receiver_specialization=rec_spec,
+            status=c.status,
+            created_at=c.created_at,
+            updated_at=c.updated_at
+        )
+
     def send_connection_request(
         self, db: Session, requester_user_id: int, target_creator_id: int
     ) -> CreatorConnection:
@@ -29,7 +53,7 @@ class ConnectionService:
         if not target:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target creator not found.")
 
-        # Check existing connection
+        # Check existing connection between the two creators
         existing = db.query(CreatorConnection).filter(
             or_(
                 and_(CreatorConnection.requester_id == requester.id, CreatorConnection.receiver_id == target.id),
@@ -42,12 +66,13 @@ class ConnectionService:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are already connected.")
             if existing.status == "pending":
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A connection request is already pending.")
-            # If rejected, allow re-requesting by setting to pending
+            # If rejected, allow re-requesting by resetting to pending
             existing.status = "pending"
             existing.requester_id = requester.id
             existing.receiver_id = target.id
             db.commit()
             db.refresh(existing)
+            logger.info(f"Re-sent connection request from creator {requester.id} to {target.id}")
             return existing
 
         conn = CreatorConnection(
@@ -76,11 +101,20 @@ class ConnectionService:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Unauthorized to modify this connection.")
 
         if action == "accept":
+            # Only the recipient can accept an incoming request
+            if conn.receiver_id != creator.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Only the recipient of a connection request can accept it."
+                )
             conn.status = "accepted"
         elif action == "reject":
             conn.status = "rejected"
         else:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid action.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid action. Allowed actions are 'accept' or 'reject'."
+            )
 
         db.commit()
         db.refresh(conn)
@@ -97,40 +131,29 @@ class ConnectionService:
                 CreatorConnection.receiver_id == creator_id
             ),
             CreatorConnection.status == "accepted"
-        ).all()
+        ).order_by(CreatorConnection.updated_at.desc()).all()
 
-        results = []
-        for c in conns:
-            req_name = c.requester.display_name if c.requester else "Creator"
-            req_avatar = c.requester.profile_image_url if c.requester else None
-            req_spec = c.requester.specialization if c.requester else None
-            
-            rec_name = c.receiver.display_name if c.receiver else "Creator"
-            rec_avatar = c.receiver.profile_image_url if c.receiver else None
-            rec_spec = c.receiver.specialization if c.receiver else None
-
-            results.append(
-                ConnectionResponse(
-                    id=c.id,
-                    requester_id=c.requester_id,
-                    requester_name=req_name,
-                    requester_avatar=req_avatar,
-                    requester_specialization=req_spec,
-                    receiver_id=c.receiver_id,
-                    receiver_name=rec_name,
-                    receiver_avatar=rec_avatar,
-                    receiver_specialization=rec_spec,
-                    status=c.status,
-                    created_at=c.created_at,
-                    updated_at=c.updated_at
-                )
-            )
+        results = [self._to_response(c) for c in conns]
 
         return CreatorConnectionsSummary(
             creator_id=creator_id,
             total_connections=len(results),
             connections=results
         )
+
+    def get_pending_incoming_requests(self, db: Session, creator_id: int) -> list[ConnectionResponse]:
+        conns = db.query(CreatorConnection).filter(
+            CreatorConnection.receiver_id == creator_id,
+            CreatorConnection.status == "pending"
+        ).order_by(CreatorConnection.created_at.desc()).all()
+        return [self._to_response(c) for c in conns]
+
+    def get_pending_outgoing_requests(self, db: Session, creator_id: int) -> list[ConnectionResponse]:
+        conns = db.query(CreatorConnection).filter(
+            CreatorConnection.requester_id == creator_id,
+            CreatorConnection.status == "pending"
+        ).order_by(CreatorConnection.created_at.desc()).all()
+        return [self._to_response(c) for c in conns]
 
     def check_connection_status(self, db: Session, creator_a_id: int, creator_b_id: int) -> str:
         if creator_a_id == creator_b_id:

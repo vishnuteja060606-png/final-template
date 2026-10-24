@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.creator import CreatorProfile
@@ -5,7 +6,19 @@ from app.models.portfolio import PortfolioItem
 from app.models.verification import VerificationSignal
 from app.schemas.creator import CreatorProfileCreate, CreatorProfileUpdate
 
+logger = logging.getLogger(__name__)
+
 class CreatorService:
+    # In-memory session tracking for de-duplicated view analytics
+    _viewed_creators: dict[str, set[int]] = {}
+    _viewed_portfolio_items: dict[str, set[int]] = {}
+
+    @classmethod
+    def clear_view_cache(cls):
+        """Reset view caches (primarily used in testing)."""
+        cls._viewed_creators.clear()
+        cls._viewed_portfolio_items.clear()
+
     @staticmethod
     def get_by_id(db: Session, creator_id: int) -> CreatorProfile | None:
         return db.query(CreatorProfile).filter(CreatorProfile.id == creator_id).first()
@@ -52,7 +65,8 @@ class CreatorService:
             setattr(profile, field, value)
         
         # Enforce mandatory 2 uploads publication status
-        if len(profile.portfolio_items) >= 2:
+        upload_count = db.query(PortfolioItem).filter(PortfolioItem.creator_id == profile.id).count()
+        if upload_count >= 2:
             profile.status = "published"
         else:
             profile.status = "draft"
@@ -71,7 +85,7 @@ class CreatorService:
         if not profile:
             return "draft"
         
-        upload_count = len(profile.portfolio_items)
+        upload_count = db.query(PortfolioItem).filter(PortfolioItem.creator_id == creator_id).count()
         if upload_count >= 2:
             profile.status = "published"
         else:
@@ -81,14 +95,45 @@ class CreatorService:
         db.refresh(profile)
         return profile.status
 
-    @staticmethod
-    def increment_view(db: Session, creator_id: int) -> int:
-        profile = CreatorService.get_by_id(db, creator_id)
-        if profile:
-            profile.views_count = (profile.views_count or 0) + 1
-            db.commit()
-            return profile.views_count
-        return 0
+    @classmethod
+    def increment_view(cls, db: Session, creator_id: int, session_key: str | None = None) -> int:
+        """
+        Increments views_count with session de-duplication to prevent refresh spam.
+        """
+        profile = db.query(CreatorProfile).filter(CreatorProfile.id == creator_id).first()
+        if not profile:
+            return 0
+
+        if session_key:
+            viewed = cls._viewed_creators.setdefault(session_key, set())
+            if creator_id in viewed:
+                return profile.views_count or 0
+            viewed.add(creator_id)
+
+        profile.views_count = (profile.views_count or 0) + 1
+        db.commit()
+        db.refresh(profile)
+        return profile.views_count
+
+    @classmethod
+    def increment_portfolio_view(cls, db: Session, item_id: int, session_key: str | None = None) -> int:
+        """
+        Increments portfolio item views_count with session de-duplication.
+        """
+        item = db.query(PortfolioItem).filter(PortfolioItem.id == item_id).first()
+        if not item:
+            return 0
+
+        if session_key:
+            viewed = cls._viewed_portfolio_items.setdefault(session_key, set())
+            if item_id in viewed:
+                return item.views_count or 0
+            viewed.add(item_id)
+
+        item.views_count = (item.views_count or 0) + 1
+        db.commit()
+        db.refresh(item)
+        return item.views_count
 
     @staticmethod
     def toggle_pin_portfolio_item(
@@ -97,18 +142,21 @@ class CreatorService:
         """
         Enforces reviewer requirement: Creator can pin their best work (up to 3 items).
         """
-        item = db.query(PortfolioItem).filter(
-            PortfolioItem.id == item_id,
-            PortfolioItem.creator_id == creator_id
-        ).first()
+        item = db.query(PortfolioItem).filter(PortfolioItem.id == item_id).first()
         if not item:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Portfolio item not found or you do not own it."
+                detail="Portfolio item not found."
+            )
+
+        if item.creator_id != creator_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to pin portfolio items that do not belong to you."
             )
 
         if is_pinned:
-            # Check how many are already pinned
+            # Check how many are already pinned (excluding this item)
             current_pinned = db.query(PortfolioItem).filter(
                 PortfolioItem.creator_id == creator_id,
                 PortfolioItem.is_pinned == True,
@@ -120,7 +168,8 @@ class CreatorService:
                     detail="You can pin a maximum of 3 featured portfolio items."
                 )
             item.is_pinned = True
-            item.pin_order = current_pinned + 1
+            if not item.pin_order:
+                item.pin_order = current_pinned + 1
         else:
             item.is_pinned = False
             item.pin_order = 0
@@ -165,8 +214,11 @@ class CreatorService:
 
     @staticmethod
     def list_featured(db: Session, limit: int = 6) -> list[CreatorProfile]:
-        return db.query(CreatorProfile).order_by(
+        return db.query(CreatorProfile).filter(
+            CreatorProfile.status == "published"
+        ).order_by(
             CreatorProfile.is_verified.desc(),
+            CreatorProfile.views_count.desc(),
             CreatorProfile.created_at.desc()
         ).limit(limit).all()
 

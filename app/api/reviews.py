@@ -6,9 +6,10 @@ from app.models.user import User
 from app.schemas.review import ReviewCreate, ReviewResponse, CreatorReviewsSummary
 from app.services.review_service import review_service
 
-router = APIRouter(prefix="/creators", tags=["Reviews"])
+router = APIRouter(tags=["Reviews"])
 
-@router.post("/{creator_id}/reviews", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/creators/{creator_id}/reviews", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
+@router.post("/api/creators/{creator_id}/reviews", response_model=ReviewResponse, status_code=status.HTTP_201_CREATED)
 def submit_creator_review(
     creator_id: int,
     data: ReviewCreate,
@@ -44,7 +45,8 @@ def submit_creator_review(
         created_at=review.created_at
     )
 
-@router.get("/{creator_id}/reviews", response_model=CreatorReviewsSummary)
+@router.get("/creators/{creator_id}/reviews", response_model=CreatorReviewsSummary)
+@router.get("/api/creators/{creator_id}/reviews", response_model=CreatorReviewsSummary)
 def list_creator_reviews(
     creator_id: int,
     db: Session = Depends(get_db)
